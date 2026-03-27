@@ -1,0 +1,428 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply text-gray-900 leading-relaxed;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 14px;
+  }
+}
+
+@layer components {
+  /* 按钮样式 */
+  .btn {
+    @apply px-4 py-2 rounded-md font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2;
+  }
+
+  .btn-primary {
+    @apply btn bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500;
+  }
+
+  .btn-secondary {
+    @apply btn bg-gray-100 text-gray-700 hover:bg-gray-200 focus:ring-gray-500;
+  }
+
+  .btn-success {
+    @apply btn bg-green-600 text-white hover:bg-green-700 focus:ring-green-500;
+  }
+
+  /* 卡片样式 */
+  .card {
+    @apply bg-white rounded-lg shadow-sm border border-gray-200 p-4;
+  }
+
+  /* 表单样式 */
+  .form-label {
+    @apply block text-sm font-medium text-gray-700 mb-2;
+  }
+
+  .form-input {
+    @apply w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent;
+  }
+
+  .form-select {
+    @apply w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white;
+  }
+
+  .form-textarea {
+    @apply w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-y;
+  }
+
+  /* 单选/复选样式 */
+  .radio-label {
+    @apply inline-flex items-center space-x-2 cursor-pointer;
+    font-size: 13px;
+  }
+
+  .checkbox-label {
+    @apply inline-flex items-center space-x-2 cursor-pointer;
+    font-size: 13px;
+  }
+}
+
+/* 三列布局 */
+.three-column-layout {
+  display: flex;
+  gap: 1rem;
+  overflow: hidden;
+  height: 100%;
+}
+
+/* 第一列：用户问题与 AI 输出 */
+.column-qa {
+  flex: 1 1 38%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* 第二列：AI召回知识依据 */
+.column-knowledge {
+  flex: 1 1 34%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-left: 1px solid #e5e7eb;
+  border-right: 1px solid #e5e7eb;
+  padding: 0 1rem;
+}
+
+/* 第三列：人工标注 */
+.column-annotation {
+  flex: 0 0 28%;
+  min-width: 280px;
+  max-width: 360px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Sticky 原始输入区块 */
+.sticky-query-section {
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: white;
+}
+
+/* 列滚动内容区域 */
+.column-scroll-content {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 8px;
+  padding-bottom: 32px;
+}
+
+.column-scroll-content > * {
+  margin-bottom: 0.75rem;
+}
+
+/* 标注卡片 */
+.annotation-card {
+  @apply bg-white rounded-lg shadow-sm border border-gray-200 p-4;
+  flex: 1;
+  overflow-y: auto;
+}
+
+/* 原始输入卡片 - 统一卡片风格 */
+.original-input-card {
+  @apply bg-white rounded-lg border border-gray-200;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+/* 用户输入高亮区域 */
+.query-highlight-section {
+  margin-bottom: 16px;
+}
+
+.query-label {
+  @apply text-gray-500;
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.query-content {
+  @apply text-blue-600;
+  background: #f8fafc;
+  border-radius: 6px;
+  padding: 14px;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.7;
+  border: 1px solid #e2e8f0;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+/* 辅助信息网格 */
+.auxiliary-info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-bottom: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.auxiliary-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.auxiliary-label {
+  @apply text-gray-400;
+  font-size: 12px;
+  font-weight: 400;
+  margin-bottom: 4px;
+}
+
+.auxiliary-value {
+  @apply text-gray-700;
+  font-size: 12px;
+  font-weight: 400;
+}
+
+/* 样本ID区域 - 弱化展示 */
+.sample-id-section {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.sample-id-label {
+  @apply text-gray-400;
+  font-size: 12px;
+}
+
+.sample-id-value {
+  @apply text-gray-500;
+  font-size: 12px;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
+}
+
+/* 信息卡片 */
+.info-card {
+  @apply bg-white rounded-lg border border-gray-200;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+/* 卡片标题 */
+.card-title {
+  @apply text-gray-800;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.4;
+  margin-bottom: 12px;
+}
+
+/* 字段标签 */
+.field-label {
+  @apply text-gray-500;
+  font-size: 13px;
+  font-weight: 500;
+  display: block;
+  margin-bottom: 6px;
+}
+
+/* 字段内容 */
+.field-content {
+  @apply text-gray-700;
+  font-size: 13px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+}
+
+/* AI输出内容样式 */
+.ai-output-content {
+  @apply text-gray-800;
+  font-size: 13px;
+  line-height: 1.75;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.ai-output-content a {
+  @apply text-blue-600 hover:text-blue-800 hover:underline;
+}
+
+/* 引用角标样式 */
+.citation {
+  @apply inline-block text-blue-600 bg-blue-50 rounded cursor-pointer hover:bg-blue-100;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 0 4px;
+  margin: 0 2px;
+}
+
+/* 引用链接样式 */
+.citation-link {
+  @apply inline-block text-blue-600 bg-blue-50 rounded hover:bg-blue-100;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 0 4px;
+  margin: 0 2px;
+}
+
+/* 外部链接样式 */
+.external-link {
+  @apply text-blue-600 hover:text-blue-800 hover:underline;
+  word-break: break-all;
+}
+
+/* 知识召回卡片 */
+.recall-fragment-card {
+  @apply bg-white border border-gray-200 rounded-lg overflow-hidden;
+  margin-bottom: 12px;
+}
+
+.recall-fragment-header {
+  @apply bg-gray-50 border-b border-gray-200;
+  padding: 12px 16px;
+}
+
+.recall-fragment-index {
+  @apply text-blue-600;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.recall-fragment-title {
+  @apply text-gray-800;
+  font-size: 14px;
+  font-weight: 600;
+  margin-top: 4px;
+}
+
+.recall-fragment-meta {
+  @apply text-gray-400;
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.recall-fragment-content {
+  padding: 16px;
+}
+
+.recall-fragment-text {
+  @apply text-gray-700;
+  font-size: 13px;
+  line-height: 1.7;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.recall-fragment-footer {
+  @apply bg-gray-50 border-t border-gray-200;
+  padding: 10px 16px;
+}
+
+.recall-fragment-scores {
+  @apply text-gray-500;
+  font-size: 12px;
+}
+
+.recall-fragment-scores span {
+  margin-right: 12px;
+}
+
+/* 标签样式 */
+.label-tag {
+  @apply inline-block text-blue-700 bg-blue-100 rounded;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 8px;
+  margin-right: 4px;
+}
+
+/* 顶部导航 */
+.nav-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.nav-info {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.nav-label {
+  @apply text-gray-500;
+  font-size: 13px;
+}
+
+.nav-value {
+  @apply text-gray-800;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.progress-text {
+  @apply text-gray-500;
+  font-size: 13px;
+}
+
+/* 按钮组 */
+.button-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 表单区域 */
+.form-section {
+  margin-bottom: 16px;
+}
+
+.form-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* 行动建议按钮 */
+.action-button {
+  @apply inline-block bg-blue-600 text-white rounded-full;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 6px 14px;
+  margin-right: 8px;
+  margin-bottom: 6px;
+}
+
+/* 猜你想问项 */
+.suggested-question-item {
+  @apply flex items-start bg-gray-50 rounded-lg;
+  padding: 12px;
+  margin-bottom: 8px;
+}
+
+.suggested-question-number {
+  @apply flex-shrink-0 text-blue-600 bg-blue-100 rounded-full flex items-center justify-center;
+  width: 24px;
+  height: 24px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-right: 12px;
+}
+
+.suggested-question-text {
+  @apply text-gray-700;
+  font-size: 13px;
+  line-height: 1.6;
+  flex: 1;
+}

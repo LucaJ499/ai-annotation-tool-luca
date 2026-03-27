@@ -1,0 +1,83 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Batch {
+  id              String        @id @default(uuid())
+  name            String
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  totalCount      Int           @default(0)
+  completedCount  Int           @default(0)
+  annotators      String        // JSON array of annotator names
+  status          String        @default("pending") // pending, in_progress, completed
+  
+  samples         Sample[]
+  annotations     Annotation[]
+}
+
+model Sample {
+  id                String        @id @default(uuid())
+  batchId           String
+  sequence          Int           // 在批次中的序号
+  
+  // 原始数据 - 固定字段（已更新）
+  systemInternalId    String?     // __system_internal_id__ -> 用户提问id
+  inputInput          String?     // input_input -> 用户输入
+  inputExpectClassfiy String?     // input_expect_classfiy -> 预期意图分类
+  inputStep           String?     // input_step -> 搬家阶段
+  inputObject         String?     // input_object -> 系统推荐搬家对象
+  inputStatus         String?     // input_status -> 搬家状态（新增）
+  outputActualOutput  String?     // output_actual_output -> AI最终输出
+  nodeScriptUncA      String?     // node_Script_uncA_output -> 行动建议内容
+  nodeScriptHbh1      String?     // node_Script_hBH1_output -> 猜你想问内容
+  nodeScriptTezR      String?     // node_Script_tezR_output -> AI打标意图分类（新增）
+  nodeScriptORfz      String?     // node_Script_oRFz_output -> AI打标意图分类原因（新增）
+  nodeZhiShangRAGRerank String?   // node_ZhiShangRAGRerank_zIOZ_output -> AI召回知识结果
+  
+  // 分配信息
+  assignedTo        String        // 分配给哪位标注人
+  status            String        @default("pending") // pending, annotated
+  
+  // 关联
+  batch             Batch         @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  annotation        Annotation?
+  
+  @@index([batchId])
+  @@index([assignedTo])
+  @@index([status])
+}
+
+model Annotation {
+  id                  String        @id @default(uuid())
+  sampleId            String        @unique
+  batchId             String
+  
+  // 标注字段（已更新）
+  isClearIntent       String?       // A. 是否为意图清晰问题: 是 / 否
+  intentClassificationAccurate String? // B. 搬家意图分类是否准确: 是 / 否
+  hasKnowledge        String?       // C. 知识库内是否有知识: 有 / 没有
+  knowledgeTitle      String?       // D. 如有知识，对应知识标题
+  recallAccuracy      String?       // E. 知识召回是否准确: 是 / 否
+  replyQuality        String?       // F. AI回复质量: 完全可用 / 部分可用 / 完全不可用
+  unavailableReasons  String        // G. 不可用原因: JSON array
+  remark              String?       // H. 备注
+  actionSuggestionRelevant String?  // I. 行动建议内容是否相关: 是 / 否
+  guessQuestionsOk    String?       // J. 猜你想问至少不离谱: 是 / 否
+  
+  // 元信息
+  annotator           String        // 标注人
+  annotatedAt         DateTime      @default(now())
+  
+  // 关联
+  sample              Sample        @relation(fields: [sampleId], references: [id], onDelete: Cascade)
+  batch               Batch         @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  
+  @@index([batchId])
+  @@index([annotator])
+}

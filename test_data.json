@@ -1,0 +1,26 @@
+[
+  {
+    "__system_internal_id__": "query_001",
+    "input_input": "搬家需要准备什么？",
+    "input_expect_classfiy": "咨询类",
+    "input_step": "准备阶段",
+    "input_complete": "否",
+    "input_object": "个人用户",
+    "output_actual_output": "搬家需要准备以下物品：\n\n1. 打包材料：纸箱、胶带、气泡膜\n2. 标记工具：记号笔、标签\n3. 清洁用品：抹布、清洁剂\n\n参考来源：\n[1] 搬家指南 - 准备篇",
+    "node_ZhiShangRAGRerank_zIOZ_output": "[{\"title\": \"搬家准备清单\", \"content\": \"详细列出搬家前需要准备的所有物品和事项\", \"score\": 0.95}, {\"title\": \"搬家注意事项\", \"content\": \"搬家过程中需要注意的各种事项\", \"score\": 0.87}]",
+    "node_Script_uncA_output": "建议提前一周开始准备",
+    "node_Script_hBH1_output": "搬家费用如何计算？"
+  },
+  {
+    "__system_internal_id__": "query_002",
+    "input_input": "搬家公司怎么选？",
+    "input_expect_classfiy": "咨询类",
+    "input_step": "选择阶段",
+    "input_complete": "否",
+    "input_object": "个人用户",
+    "output_actual_output": "选择搬家公司时，建议考虑以下几点：\n\n- 查看公司资质和口碑\n- 比较多家报价\n- 确认保险和赔偿政策\n\n参考来源：\n[1] 搬家公司选择指南",
+    "node_ZhiShangRAGRerank_zIOZ_output": "[{\"title\": \"如何选择搬家公司\", \"content\": \"从资质、价格、服务等多个维度评估搬家公司\", \"score\": 0.92}]",
+    "node_Script_uncA_output": "建议货比三家",
+    "node_Script_hBH1_output": "搬家需要提前预约吗？"
+  }
+]
