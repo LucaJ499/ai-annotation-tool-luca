@@ -36,3 +36,4 @@ Thumbs.db
 # Uncomment the line below if you don't want to track the database
 # prisma/prisma/*.db
 # prisma/prisma/*.db-journal
+node_modules
