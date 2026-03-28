@@ -160,12 +160,12 @@ function parseMarkdownOutput(raw: string): FormattedAIOutput {
 
   // 如果没有找到参考来源区域，尝试从正文中提取 [N] 格式的引用
   if (references.length === 0) {
-    const citationMatches = content.matchAll(/\[\[?(\d+)\]?\]/g);
+    const citationMatches = Array.from(content.matchAll(/\[\[?(\d+)\]?\]/g));
     const citationIndices = new Set<number>();
 
-    for (const match of Array.from(citationMatches)) {
+    citationMatches.forEach((match) => {
       citationIndices.add(parseInt(match[1], 10));
-    }
+    });
 
     // 为每个引用编号创建一个占位参考
     citationIndices.forEach((idx) => {
