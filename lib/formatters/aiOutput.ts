@@ -163,7 +163,7 @@ function parseMarkdownOutput(raw: string): FormattedAIOutput {
     const citationMatches = content.matchAll(/\[\[?(\d+)\]?\]/g);
     const citationIndices = new Set<number>();
 
-    for (const match of citationMatches) {
+    for (const match of Array.from(citationMatches)) {
       citationIndices.add(parseInt(match[1], 10));
     }
 
