@@ -211,7 +211,8 @@ export default function AnnotatePage() {
         } else if (navigateAfterSave === 'prev') {
           loadNextSample(sample.sequence, 'prev');
         } else if (navigateAfterSave === 'finish') {
-          // 最后一条保存完成，直接返回批次详情页
+          // 最后一条保存完成，显示提示并返回
+          alert('已完成全部标注\n\n当前批次的待标注数据已全部完成，点击确定返回上一页。');
           router.push(`/batches/${batchId}`);
         } else {
           // 更新进度
@@ -226,7 +227,7 @@ export default function AnnotatePage() {
   };
 
   // 判断是否为最后一条
-  const isLastSample = progress.current >= progress.total && progress.total > 0;
+  const isLastSample = progress.current === progress.total && progress.total > 0;
 
   const toggleFragment = (index: number) => {
     const newSet = new Set(expandedFragments);

@@ -107,6 +107,16 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    // 检查批次大小限制
+    const MAX_SAMPLES = 5000;
+    if (samples.length > MAX_SAMPLES) {
+      console.error(`[POST /api/batches] Step 2 失败: 样本数量超过限制 (${samples.length} > ${MAX_SAMPLES})`);
+      return NextResponse.json(
+        { success: false, error: `单次最多支持 ${MAX_SAMPLES} 条样本，当前有 ${samples.length} 条。请拆分 Excel 文件后分批上传。` },
+        { status: 400 }
+      );
+    }
     console.log('[POST /api/batches] Step 2: 参数校验通过');
 
     // Step 3: 分析样本数据结构

@@ -115,6 +115,15 @@ export default function NewBatchPage() {
         return;
       }
 
+      // 检查批次大小限制
+      const MAX_SAMPLES = 5000;
+      if (jsonData.length > MAX_SAMPLES) {
+        setError(`Excel 数据量超过限制`);
+        setErrorDetail(`单次最多支持 ${MAX_SAMPLES} 条样本，当前有 ${jsonData.length} 条。请拆分 Excel 文件后分批上传。`);
+        setLoading(false);
+        return;
+      }
+
       console.log('[前端] 准备提交，样本数量:', jsonData.length);
       console.log('[前端] 标注人:', validAnnotators);
 
