@@ -1,5 +1,7 @@
 'use client';
 
+export const dynamic = 'force-dynamic';  // 告诉 Next.js 不要静态生成，每次访问时动态渲染
+
 import { Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
