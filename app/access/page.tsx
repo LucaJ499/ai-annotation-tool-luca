@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Shield, ArrowRight, AlertCircle } from 'lucide-react';
 
-export default function AccessPage() {
+function AccessPageContent() {
   const [accessKey, setAccessKey] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -160,5 +160,13 @@ export default function AccessPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function AccessPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gray-50 flex items-center justify-center">加载中...</div>}>
+      <AccessPageContent />
+    </Suspense>
   );
 }
