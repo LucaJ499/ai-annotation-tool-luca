@@ -50,13 +50,20 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // 获取该标注人的总样本数和已完成数
-    const [totalCount, completedCount] = await Promise.all([
+    // 获取该标注人的总样本数和已完成数，以及当前样本在个人列表中的序号
+    const [totalCount, completedCount, currentAnnotatorSeq] = await Promise.all([
       prisma.sample.count({
         where: { batchId, assignedTo: annotator },
       }),
       prisma.sample.count({
         where: { batchId, assignedTo: annotator, status: 'annotated' },
+      }),
+      prisma.sample.count({
+        where: { 
+          batchId, 
+          assignedTo: annotator,
+          sequence: { lte: sample.sequence }
+        },
       }),
     ]);
 
@@ -65,7 +72,7 @@ export async function GET(request: NextRequest) {
       data: {
         sample,
         progress: {
-          current: sample.sequence,
+          current: currentAnnotatorSeq,
           total: totalCount,
           completed: completedCount,
         },
