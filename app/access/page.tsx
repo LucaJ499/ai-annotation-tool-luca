@@ -1,16 +1,18 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
 import { Shield, ArrowRight, AlertCircle } from 'lucide-react';
 
-function AccessPageContent() {
+// ✅ useSearchParams 只在这个子组件里调用
+function AccessContent() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const [accessKey, setAccessKey] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [debugInfo, setDebugInfo] = useState('');
-  const searchParams = useSearchParams();
-  const router = useRouter();
   
   // 获取跳转来源路径
   const fromPath = searchParams.get('from') || '/';
@@ -163,10 +165,11 @@ function AccessPageContent() {
   );
 }
 
+// ✅ 页面主组件本身不碰 useSearchParams，只负责包裹
 export default function AccessPage() {
   return (
     <Suspense fallback={<div className="min-h-screen bg-gray-50 flex items-center justify-center">加载中...</div>}>
-      <AccessPageContent />
+      <AccessContent />
     </Suspense>
   );
 }

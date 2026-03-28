@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { Suspense } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, ChevronLeft, ChevronRight, Save } from 'lucide-react';
 import { parseKnowledgeRecall, KnowledgeFragment, truncateText, processContentNewlines } from '@/lib/formatters/knowledgeRecall';
@@ -46,7 +47,8 @@ interface Progress {
   completed: number;
 }
 
-export default function AnnotatePage() {
+// ✅ useSearchParams 只在这个子组件里调用
+function AnnotateContent() {
   const params = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -845,5 +847,14 @@ export default function AnnotatePage() {
         </div>
       )}
     </div>
+  );
+}
+
+// ✅ 页面主组件本身不碰 useSearchParams，只负责包裹
+export default function AnnotatePage() {
+  return (
+    <Suspense fallback={<div className="flex-1 flex items-center justify-center text-gray-500">加载中...</div>}>
+      <AnnotateContent />
+    </Suspense>
   );
 }
