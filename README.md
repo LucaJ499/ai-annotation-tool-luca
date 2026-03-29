@@ -91,7 +91,7 @@ npm run dev
 
 本地开发时，在 `.env.local` 中设置：
 ```bash
-ACCESS_KEY=ebp-annotation-banjia-2026
+ACCESS_KEY=xxxx
 ```
 
 ### 线上部署
