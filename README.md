@@ -85,7 +85,7 @@ npm run dev
 
 | 变量名 | 说明 | 示例 |
 |--------|------|------|
-| `ACCESS_KEY` | 统一访问口令 | `ebp-annotation-banjia-2026` |
+| `ACCESS_KEY` | 统一访问口令 | `xxxx` |
 
 ### 本地开发
 
