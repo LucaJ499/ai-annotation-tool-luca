@@ -3,7 +3,7 @@
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, ChevronLeft, ChevronRight, Save } from 'lucide-react';
+import { ArrowLeft, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Save } from 'lucide-react';
 import { parseKnowledgeRecall, KnowledgeFragment, truncateText, processContentNewlines } from '@/lib/formatters/knowledgeRecall';
 import { parseActionSuggestion, FormattedActionSuggestion, truncateActionContent } from '@/lib/formatters/actionSuggestion';
 import { parseSuggestedQuestions, FormattedSuggestedQuestions } from '@/lib/formatters/suggestedQuestions';
@@ -26,6 +26,7 @@ interface Sample {
   nodeScriptHbh1: string | null;
   nodeScriptTezR: string | null;
   nodeScriptORfz: string | null;
+  status: string;
   annotation: {
     isClearIntent: string | null;
     intentClassificationAccurate: string | null;
@@ -70,6 +71,9 @@ export default function AnnotateContent() {
   const [remark, setRemark] = useState('');
   const [actionSuggestionRelevant, setActionSuggestionRelevant] = useState('');
   const [guessQuestionsOk, setGuessQuestionsOk] = useState('');
+
+  // 状态控制
+  const [isMetaExpanded, setIsMetaExpanded] = useState(false);
 
   // 格式化结果
   const [knowledgeRecall, setKnowledgeRecall] = useState<{ success: boolean; fragments: KnowledgeFragment[]; raw: string } | null>(null);
@@ -207,6 +211,9 @@ export default function AnnotateContent() {
 
       const result = await response.json();
       if (result.success) {
+        // 如果当前样本原本是未标注状态，才增加完成数，避免重复保存导致进度无限增加
+        const isFirstTimeSave = sample.status !== 'annotated';
+        
         if (navigateAfterSave === 'next') {
           loadNextSample(sample.sequence, 'next');
         } else if (navigateAfterSave === 'prev') {
@@ -216,8 +223,12 @@ export default function AnnotateContent() {
           alert('已完成全部标注\n\n当前批次的待标注数据已全部完成，点击确定返回上一页。');
           router.push(`/batches/${batchId}`);
         } else {
-          // 更新进度
-          setProgress((prev) => ({ ...prev, completed: prev.completed + 1 }));
+          // 仅在原地保存且是首次完成时，才更新已完成数量
+          if (isFirstTimeSave) {
+            setProgress((prev) => ({ ...prev, completed: Math.min(prev.completed + 1, prev.total) }));
+            setSample({ ...sample, status: 'annotated' });
+          }
+          alert('保存成功');
         }
       }
     } catch (error) {
@@ -324,24 +335,38 @@ export default function AnnotateContent() {
                   </div>
                 </div>
 
-                {/* 辅助信息区域 */}
-                <div className="auxiliary-info-grid">
-                  <div className="auxiliary-item">
-                    <span className="auxiliary-label">{FIELD_MAPPING['input_expect_classfiy']}</span>
-                    <span className="auxiliary-value">{sample.inputExpectClassfiy || '-'}</span>
+                {/* 辅助信息区域 (可折叠) */}
+                <div className="meta-info-container">
+                  <div 
+                    className="meta-info-header cursor-pointer flex items-center justify-between py-2 border-t border-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
+                    onClick={() => setIsMetaExpanded(!isMetaExpanded)}
+                  >
+                    <span className="text-sm font-medium flex items-center gap-1">
+                      附加信息 (意图/阶段/状态等)
+                    </span>
+                    {isMetaExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                   </div>
-                  <div className="auxiliary-item">
-                    <span className="auxiliary-label">{FIELD_MAPPING['input_step']}</span>
-                    <span className="auxiliary-value">{sample.inputStep || '-'}</span>
-                  </div>
-                  <div className="auxiliary-item">
-                    <span className="auxiliary-label">{FIELD_MAPPING['input_object']}</span>
-                    <span className="auxiliary-value">{sample.inputObject || '-'}</span>
-                  </div>
-                  <div className="auxiliary-item">
-                    <span className="auxiliary-label">{FIELD_MAPPING['input_status']}</span>
-                    <span className="auxiliary-value">{sample.inputStatus || '-'}</span>
-                  </div>
+
+                  {isMetaExpanded && (
+                    <div className="auxiliary-info-grid mt-0 border-t-0 pt-2 pb-2">
+                      <div className="auxiliary-item">
+                        <span className="auxiliary-label">{FIELD_MAPPING['input_expect_classfiy']}</span>
+                        <span className="auxiliary-value">{sample.inputExpectClassfiy || '-'}</span>
+                      </div>
+                      <div className="auxiliary-item">
+                        <span className="auxiliary-label">{FIELD_MAPPING['input_step']}</span>
+                        <span className="auxiliary-value">{sample.inputStep || '-'}</span>
+                      </div>
+                      <div className="auxiliary-item">
+                        <span className="auxiliary-label">{FIELD_MAPPING['input_object']}</span>
+                        <span className="auxiliary-value">{sample.inputObject || '-'}</span>
+                      </div>
+                      <div className="auxiliary-item">
+                        <span className="auxiliary-label">{FIELD_MAPPING['input_status']}</span>
+                        <span className="auxiliary-value">{sample.inputStatus || '-'}</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* 用户提问ID - 弱化展示 */}
@@ -652,9 +677,9 @@ export default function AnnotateContent() {
           {/* 第三列：人工标注 */}
           <div className="column-annotation">
             <div className="annotation-card">
-              <h3 className="card-title" style={{ fontSize: '18px', marginBottom: '20px' }}>标注</h3>
+              <h3 className="card-title" style={{ fontSize: '18px', marginBottom: '24px' }}>标注</h3>
 
-              <div className="space-y-5">
+              <div className="space-y-6">
                 {/* A. 是否为意图清晰问题 */}
                 <div className="form-section">
                   <label className="form-label">{ANNOTATION_FIELDS.isClearIntent.label}</label>

@@ -4,61 +4,107 @@
 
 @layer base {
   body {
-    @apply text-gray-900 leading-relaxed;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    @apply text-gray-800 leading-relaxed;
+    background-color: #f8f9fa; /* Google's light gray background */
+    color: #202124; /* Google's primary text color */
+    font-family: 'Google Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     font-size: 14px;
   }
 }
 
 @layer components {
-  /* 按钮样式 */
+  /* 按钮样式 - Google Material 风格 */
   .btn {
-    @apply px-4 py-2 rounded-md font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2;
+    @apply px-5 py-2 font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 flex items-center justify-center;
+    border-radius: 24px; /* 药丸形状 */
+    letter-spacing: 0.25px;
   }
 
   .btn-primary {
-    @apply btn bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500;
+    @apply btn text-white;
+    background-color: #1a73e8; /* Google Blue */
+    border: 1px solid transparent;
+  }
+  .btn-primary:hover {
+    background-color: #1557b0;
+    box-shadow: 0 1px 2px 0 rgba(60,64,67,0.3), 0 1px 3px 1px rgba(60,64,67,0.15);
+  }
+  .btn-primary:focus {
+    @apply ring-blue-500;
   }
 
   .btn-secondary {
-    @apply btn bg-gray-100 text-gray-700 hover:bg-gray-200 focus:ring-gray-500;
+    @apply btn bg-transparent;
+    color: #1a73e8;
+    border: 1px solid #dadce0;
+  }
+  .btn-secondary:hover {
+    background-color: #f8f9fa;
+    border-color: #d2e3fc;
   }
 
   .btn-success {
-    @apply btn bg-green-600 text-white hover:bg-green-700 focus:ring-green-500;
+    @apply btn text-white;
+    background-color: #188038; /* Google Green */
+  }
+  .btn-success:hover {
+    background-color: #146c2e;
+    box-shadow: 0 1px 2px 0 rgba(60,64,67,0.3), 0 1px 3px 1px rgba(60,64,67,0.15);
   }
 
-  /* 卡片样式 */
+  /* 卡片样式 - Material Design 3 */
   .card {
-    @apply bg-white rounded-lg shadow-sm border border-gray-200 p-4;
+    @apply bg-white p-5;
+    border-radius: 12px;
+    border: 1px solid #dadce0;
+    box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05);
+    transition: box-shadow 0.2s ease-in-out;
+  }
+  .card:hover {
+    box-shadow: 0 1px 3px 0 rgba(60,64,67,0.3);
   }
 
   /* 表单样式 */
   .form-label {
-    @apply block text-sm font-medium text-gray-700 mb-2;
+    @apply block text-sm font-medium mb-2;
+    color: #3c4043;
   }
 
   .form-input {
-    @apply w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent;
+    @apply w-full px-4 py-2.5 bg-white transition-colors duration-200;
+    border: 1px solid #dadce0;
+    border-radius: 8px;
+    color: #202124;
+  }
+  .form-input:focus {
+    outline: none;
+    border-color: #1a73e8;
+    box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.2);
   }
 
   .form-select {
-    @apply w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white;
+    @apply form-input appearance-none bg-no-repeat;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+    background-position: right 0.5rem center;
+    background-size: 1.5em 1.5em;
+    padding-right: 2.5rem;
   }
 
   .form-textarea {
-    @apply w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-y;
+    @apply form-input resize-y;
   }
 
   /* 单选/复选样式 */
   .radio-label {
-    @apply inline-flex items-center space-x-2 cursor-pointer;
-    font-size: 13px;
+    @apply inline-flex items-center space-x-3 cursor-pointer;
+    font-size: 14px;
+    color: #3c4043;
   }
 
   .checkbox-label {
-    @apply inline-flex items-center space-x-2 cursor-pointer;
-    font-size: 13px;
+    @apply inline-flex items-center space-x-3 cursor-pointer;
+    font-size: 14px;
+    color: #3c4043;
   }
 }
 
@@ -124,15 +170,20 @@
 
 /* 标注卡片 */
 .annotation-card {
-  @apply bg-white rounded-lg shadow-sm border border-gray-200 p-4;
+  @apply bg-white p-5;
+  border-radius: 16px;
+  border: 1px solid #dadce0;
+  box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05);
   flex: 1;
   overflow-y: auto;
 }
 
 /* 原始输入卡片 - 统一卡片风格 */
 .original-input-card {
-  @apply bg-white rounded-lg border border-gray-200;
-  padding: 16px;
+  @apply bg-white p-5;
+  border-radius: 16px;
+  border: 1px solid #dadce0;
+  box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05);
   margin-bottom: 16px;
 }
 
@@ -142,21 +193,21 @@
 }
 
 .query-label {
-  @apply text-gray-500;
+  color: #202124;
   font-size: 16px;
-  font-weight: 600;
-  margin-bottom: 8px;
+  font-weight: 500;
+  margin-bottom: 12px;
 }
 
 .query-content {
-  @apply text-blue-600;
-  background: #f8fafc;
-  border-radius: 6px;
-  padding: 14px;
+  color: #1a73e8;
+  background: #e8f0fe;
+  border-radius: 8px;
+  padding: 16px;
   font-size: 15px;
-  font-weight: 500;
-  line-height: 1.7;
-  border: 1px solid #e2e8f0;
+  font-weight: 400;
+  line-height: 1.6;
+  border: 1px solid transparent;
   word-wrap: break-word;
   overflow-wrap: break-word;
 }
@@ -211,23 +262,25 @@
 
 /* 信息卡片 */
 .info-card {
-  @apply bg-white rounded-lg border border-gray-200;
-  padding: 16px;
-  margin-bottom: 12px;
+  @apply bg-white p-5;
+  border-radius: 16px;
+  border: 1px solid #dadce0;
+  box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05);
+  margin-bottom: 16px;
 }
 
 /* 卡片标题 */
 .card-title {
-  @apply text-gray-800;
+  color: #202124;
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 500;
   line-height: 1.4;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
 }
 
 /* 字段标签 */
 .field-label {
-  @apply text-gray-500;
+  color: #5f6368;
   font-size: 13px;
   font-weight: 500;
   display: block;
@@ -236,23 +289,26 @@
 
 /* 字段内容 */
 .field-content {
-  @apply text-gray-700;
-  font-size: 13px;
-  line-height: 1.65;
+  color: #3c4043;
+  font-size: 14px;
+  line-height: 1.6;
   white-space: pre-wrap;
 }
 
 /* AI输出内容样式 */
 .ai-output-content {
-  @apply text-gray-800;
-  font-size: 13px;
-  line-height: 1.75;
+  color: #202124;
+  font-size: 14px;
+  line-height: 1.6;
   word-wrap: break-word;
   overflow-wrap: break-word;
 }
 
 .ai-output-content a {
-  @apply text-blue-600 hover:text-blue-800 hover:underline;
+  color: #1a73e8;
+}
+.ai-output-content a:hover {
+  text-decoration: underline;
 }
 
 /* 引用角标样式 */
@@ -281,32 +337,40 @@
 
 /* 知识召回卡片 */
 .recall-fragment-card {
-  @apply bg-white border border-gray-200 rounded-lg overflow-hidden;
-  margin-bottom: 12px;
+  @apply bg-white border border-gray-200 overflow-hidden;
+  border-radius: 12px;
+  border-color: #dadce0;
+  margin-bottom: 16px;
+  transition: box-shadow 0.2s;
+}
+.recall-fragment-card:hover {
+  box-shadow: 0 1px 3px 0 rgba(60,64,67,0.3);
 }
 
 .recall-fragment-header {
   @apply bg-gray-50 border-b border-gray-200;
+  background-color: #f8f9fa;
+  border-color: #dadce0;
   padding: 12px 16px;
 }
 
 .recall-fragment-index {
-  @apply text-blue-600;
+  color: #1a73e8;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .recall-fragment-title {
-  @apply text-gray-800;
+  color: #202124;
   font-size: 14px;
-  font-weight: 600;
-  margin-top: 4px;
+  font-weight: 500;
+  margin-top: 6px;
 }
 
 .recall-fragment-meta {
-  @apply text-gray-400;
+  color: #5f6368;
   font-size: 12px;
-  margin-top: 4px;
+  margin-top: 6px;
 }
 
 .recall-fragment-content {
@@ -314,20 +378,22 @@
 }
 
 .recall-fragment-text {
-  @apply text-gray-700;
+  color: #3c4043;
   font-size: 13px;
-  line-height: 1.7;
+  line-height: 1.6;
   word-wrap: break-word;
   overflow-wrap: break-word;
 }
 
 .recall-fragment-footer {
   @apply bg-gray-50 border-t border-gray-200;
+  background-color: #f8f9fa;
+  border-color: #dadce0;
   padding: 10px 16px;
 }
 
 .recall-fragment-scores {
-  @apply text-gray-500;
+  color: #5f6368;
   font-size: 12px;
 }
 
@@ -337,11 +403,13 @@
 
 /* 标签样式 */
 .label-tag {
-  @apply inline-block text-blue-700 bg-blue-100 rounded;
+  color: #1967d2;
+  background-color: #e8f0fe;
+  border-radius: 4px;
   font-size: 11px;
   font-weight: 500;
   padding: 2px 8px;
-  margin-right: 4px;
+  margin-right: 6px;
 }
 
 /* 顶部导航 */
@@ -349,9 +417,9 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 16px;
+  margin-bottom: 24px;
   padding-bottom: 16px;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid #dadce0;
 }
 
 .nav-info {
@@ -361,18 +429,18 @@
 }
 
 .nav-label {
-  @apply text-gray-500;
+  color: #5f6368;
   font-size: 13px;
 }
 
 .nav-value {
-  @apply text-gray-800;
+  color: #202124;
   font-size: 14px;
   font-weight: 500;
 }
 
 .progress-text {
-  @apply text-gray-500;
+  color: #5f6368;
   font-size: 13px;
 }
 
@@ -380,49 +448,69 @@
 .button-group {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
 }
 
 /* 表单区域 */
 .form-section {
-  margin-bottom: 16px;
+  margin-bottom: 24px;
 }
 
 .form-options {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
 }
 
 /* 行动建议按钮 */
 .action-button {
-  @apply inline-block bg-blue-600 text-white rounded-full;
+  background-color: #1a73e8;
+  color: white;
+  border-radius: 16px;
   font-size: 13px;
   font-weight: 500;
-  padding: 6px 14px;
+  padding: 6px 16px;
   margin-right: 8px;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
+  transition: background-color 0.2s;
+}
+.action-button:hover {
+  background-color: #1557b0;
 }
 
 /* 猜你想问项 */
 .suggested-question-item {
-  @apply flex items-start bg-gray-50 rounded-lg;
-  padding: 12px;
-  margin-bottom: 8px;
+  display: flex;
+  align-items: flex-start;
+  background-color: #f8f9fa;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  padding: 12px 16px;
+  margin-bottom: 12px;
+  transition: background-color 0.2s;
+}
+.suggested-question-item:hover {
+  background-color: #f1f3f4;
 }
 
 .suggested-question-number {
-  @apply flex-shrink-0 text-blue-600 bg-blue-100 rounded-full flex items-center justify-center;
-  width: 24px;
-  height: 24px;
-  font-size: 12px;
-  font-weight: 600;
+  flex-shrink: 0;
+  color: #1a73e8;
+  background-color: #e8f0fe;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  font-size: 13px;
+  font-weight: 500;
   margin-right: 12px;
 }
 
 .suggested-question-text {
-  @apply text-gray-700;
-  font-size: 13px;
+  color: #3c4043;
+  font-size: 14px;
   line-height: 1.6;
   flex: 1;
 }
