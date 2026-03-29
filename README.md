@@ -45,7 +45,7 @@ npm install
 DATABASE_URL="file:/tmp/ai-annotation-tool.db"
 
 # 访问口令配置（必须设置，否则无法访问网站）
-ACCESS_KEY=ebp-annotation-banjia-2026
+ACCESS_KEY=xxxx
 ```
 
 **重要说明**：
