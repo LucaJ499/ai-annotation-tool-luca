@@ -32,7 +32,18 @@ export function middleware(request: NextRequest) {
   console.log('[MIDDLEWARE] cookie状态:', accessCookie ? `存在，值=${accessCookie.value}` : '不存在')
   
   if (!accessCookie || accessCookie.value !== 'verified') {
-    console.log('[MIDDLEWARE] 未验证，重定向到/access')
+    console.log('[MIDDLEWARE] 未验证，处理未授权请求')
+    
+    // 拦截 API 请求，避免返回 307 导致前端 fetch 自动跳转去请求 HTML
+    if (pathname.startsWith('/api/')) {
+      console.log('[MIDDLEWARE] API 请求未授权，返回 401')
+      return NextResponse.json(
+        { success: false, error: '未授权或登录已过期，请刷新页面重新登录' },
+        { status: 401 }
+      )
+    }
+
+    console.log('[MIDDLEWARE] 页面请求未授权，重定向到/access')
     // 未验证，重定向到访问口令页面
     const accessUrl = new URL('/access', request.url)
     // 记录原始访问路径，验证成功后可以跳转回去

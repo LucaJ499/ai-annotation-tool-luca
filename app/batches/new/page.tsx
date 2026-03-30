@@ -146,6 +146,25 @@ export default function NewBatchPage() {
         return;
       }
 
+      // 处理非 200/2xx 的 HTTP 状态码
+      if (!response.ok) {
+        if (response.status === 401) {
+          setError('登录已过期');
+          setErrorDetail('请刷新页面或重新输入访问口令');
+          setLoading(false);
+          return;
+        }
+      }
+
+      // 预检查 Content-Type，防止解析 HTML 崩溃
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        setError('服务器响应格式错误');
+        setErrorDetail('预期 JSON 格式，但收到了其他类型的数据。可能是网关拦截或登录状态异常。');
+        setLoading(false);
+        return;
+      }
+
       // 解析响应
       let result;
       try {
