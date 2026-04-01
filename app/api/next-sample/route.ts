@@ -19,28 +19,63 @@ export async function GET(request: NextRequest) {
 
     const currentSeq = currentSequence ? parseInt(currentSequence, 10) : 0;
 
-    // 构建查询条件
-    const where: any = {
-      batchId,
-      assignedTo: annotator,
-    };
+    // 1. 提前获取进度信息
+    const [totalCount, completedCount] = await Promise.all([
+      prisma.sample.count({
+        where: { batchId, assignedTo: annotator },
+      }),
+      prisma.sample.count({
+        where: { batchId, assignedTo: annotator, status: 'annotated' },
+      }),
+    ]);
 
-    if (direction === 'next') {
-      where.sequence = { gt: currentSeq };
+    let sample = null;
+    let isAllCompleted = false;
+
+    // 2. 判断是否为全量完成后的首次进入兜底场景
+    if (currentSeq === 0 && direction === 'next' && totalCount > 0 && totalCount === completedCount) {
+      // 兜底：获取最后一条已标注的样本
+      sample = await prisma.sample.findFirst({
+        where: {
+          batchId,
+          assignedTo: annotator,
+          status: 'annotated',
+        },
+        orderBy: {
+          sequence: 'desc',
+        },
+        include: {
+          annotation: true,
+        },
+      });
+      isAllCompleted = true;
     } else {
-      where.sequence = { lt: currentSeq };
-    }
+      // 3. 常规查询逻辑
+      const where: any = {
+        batchId,
+        assignedTo: annotator,
+      };
 
-    // 查询下一条/上一条
-    const sample = await prisma.sample.findFirst({
-      where,
-      orderBy: {
-        sequence: direction === 'next' ? 'asc' : 'desc',
-      },
-      include: {
-        annotation: true,
-      },
-    });
+      if (direction === 'next') {
+        where.sequence = { gt: currentSeq };
+        // 如果是首次进入（未全量完成），过滤掉已标注的，自动跳转到第一条未标注样本
+        if (currentSeq === 0) {
+          where.status = { not: 'annotated' };
+        }
+      } else {
+        where.sequence = { lt: currentSeq };
+      }
+
+      sample = await prisma.sample.findFirst({
+        where,
+        orderBy: {
+          sequence: direction === 'next' ? 'asc' : 'desc',
+        },
+        include: {
+          annotation: true,
+        },
+      });
+    }
 
     if (!sample) {
       return NextResponse.json({
@@ -50,27 +85,20 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // 获取该标注人的总样本数和已完成数，以及当前样本在个人列表中的序号
-    const [totalCount, completedCount, currentAnnotatorSeq] = await Promise.all([
-      prisma.sample.count({
-        where: { batchId, assignedTo: annotator },
-      }),
-      prisma.sample.count({
-        where: { batchId, assignedTo: annotator, status: 'annotated' },
-      }),
-      prisma.sample.count({
-        where: { 
-          batchId, 
-          assignedTo: annotator,
-          sequence: { lte: sample.sequence }
-        },
-      }),
-    ]);
+    // 4. 获取当前样本在个人列表中的序号
+    const currentAnnotatorSeq = await prisma.sample.count({
+      where: { 
+        batchId, 
+        assignedTo: annotator,
+        sequence: { lte: sample.sequence }
+      },
+    });
 
     return NextResponse.json({
       success: true,
       data: {
         sample,
+        isAllCompleted,
         progress: {
           current: currentAnnotatorSeq,
           total: totalCount,

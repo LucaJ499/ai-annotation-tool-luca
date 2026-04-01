@@ -105,9 +105,16 @@ export default function AnnotateContent() {
       const result = await response.json();
 
       if (result.success && result.data) {
-        const { sample: newSample, progress: newProgress } = result.data;
+        const { sample: newSample, progress: newProgress, isAllCompleted } = result.data;
         setSample(newSample);
         setProgress(newProgress);
+
+        // 若全部完成且为首次进入，则提示
+        if (isAllCompleted && currentSequence === 0) {
+          setTimeout(() => {
+            alert('当前批次的所有样本已标注完成，为您展示最后一条记录。');
+          }, 100);
+        }
 
         // 加载已有标注
         if (newSample.annotation) {
