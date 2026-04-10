@@ -12,6 +12,9 @@ export async function GET(request: NextRequest, { params }: Params) {
   try {
     const { id } = params;
 
+    const { searchParams } = new URL(request.url);
+    const modelFilter = searchParams.get('model_filter') || 'all'; // deepseek, gpt, all
+
     // 获取批次基本信息
     const batch = await prisma.batch.findUnique({
       where: { id },
@@ -41,14 +44,26 @@ export async function GET(request: NextRequest, { params }: Params) {
     const totalSubmitted = annotatedSamples.length;
 
     // 统计分布数据
-    const distributions = {
+    const distributions: any = {
       clearIntent: { '是': 0, '否': 0 },
       intentAccurate: { '是': 0, '否': 0 },
       hasKnowledge: { '有': 0, '没有': 0 },
       replyQuality: { '完全可用': 0, '部分可用': 0, '完全不可用': 0 },
+      deepseekReplyQuality: { '完全可用': 0, '部分可用': 0, '完全不可用': 0 },
+      gptReplyQuality: { '完全可用': 0, '部分可用': 0, '完全不可用': 0 },
       actionRelevant: { '是': 0, '否': 0 },
       guessQuestionsOk: { '是': 0, '否': 0 },
     };
+
+    if (batch.mode === 'compare') {
+      distributions.compareResult = { 
+        'GPT 显著胜出': 0, 
+        'GPT 小幅胜出': 0, 
+        '效果一致（平局）': 0, 
+        'DeepSeek 小幅胜出': 0, 
+        'DeepSeek 显著胜出': 0 
+      };
+    }
 
     annotatedSamples.forEach((sample) => {
       const anno = sample.annotation!;
@@ -69,8 +84,20 @@ export async function GET(request: NextRequest, { params }: Params) {
       }
       
       // AI回复质量分布
-      if (anno.replyQuality && distributions.replyQuality.hasOwnProperty(anno.replyQuality)) {
-        distributions.replyQuality[anno.replyQuality as keyof typeof distributions.replyQuality]++;
+      if (batch.mode === 'compare') {
+        const dsQuality = (anno as any).deepseekQuality;
+        const gptQuality = (anno as any).gptQuality;
+        if (dsQuality && distributions.deepseekReplyQuality.hasOwnProperty(dsQuality)) {
+          distributions.deepseekReplyQuality[dsQuality as keyof typeof distributions.deepseekReplyQuality]++;
+        }
+        if (gptQuality && distributions.gptReplyQuality.hasOwnProperty(gptQuality)) {
+          distributions.gptReplyQuality[gptQuality as keyof typeof distributions.gptReplyQuality]++;
+        }
+      } else {
+        const targetQuality = anno.replyQuality;
+        if (targetQuality && distributions.replyQuality.hasOwnProperty(targetQuality)) {
+          distributions.replyQuality[targetQuality as keyof typeof distributions.replyQuality]++;
+        }
       }
       
       // 行动建议内容是否相关
@@ -81,6 +108,13 @@ export async function GET(request: NextRequest, { params }: Params) {
       // 猜你想问至少不离谱
       if (anno.guessQuestionsOk && distributions.guessQuestionsOk.hasOwnProperty(anno.guessQuestionsOk)) {
         distributions.guessQuestionsOk[anno.guessQuestionsOk as keyof typeof distributions.guessQuestionsOk]++;
+      }
+      
+      // 对比效果
+      if (batch.mode === 'compare' && anno.compareResult) {
+        if (distributions.compareResult.hasOwnProperty(anno.compareResult)) {
+          distributions.compareResult[anno.compareResult as keyof typeof distributions.compareResult]++;
+        }
       }
     });
 
@@ -93,10 +127,21 @@ export async function GET(request: NextRequest, { params }: Params) {
             name: batch.name,
             totalCount: batch.totalCount,
             completedCount: batch.completedCount,
+            mode: batch.mode,
           },
           mainMetric: {
             aiReplyWeighted: { value: 0, numerator: 0, denominator: 0, noData: true },
             aiReplyBasic: { value: 0, numerator: 0, denominator: 0, noData: true },
+          },
+          compareMetrics: {
+            deepseek: {
+              aiReplyWeighted: { value: 0, numerator: 0, denominator: 0, noData: true },
+              aiReplyBasic: { value: 0, numerator: 0, denominator: 0, noData: true },
+            },
+            gpt: {
+              aiReplyWeighted: { value: 0, numerator: 0, denominator: 0, noData: true },
+              aiReplyBasic: { value: 0, numerator: 0, denominator: 0, noData: true },
+            },
           },
           processMetrics: {
             clearIntent: { value: 0, numerator: 0, denominator: 0, noData: true },
@@ -160,6 +205,27 @@ export async function GET(request: NextRequest, { params }: Params) {
       ? Math.round((weightedNumerator / totalSubmitted) * 100)
       : 0;
 
+    // Compare metrics
+    const dsFullyAvailable = distributions.deepseekReplyQuality['完全可用'];
+    const dsPartiallyAvailable = distributions.deepseekReplyQuality['部分可用'];
+    const dsAiReplyBasicValue = totalSubmitted > 0
+      ? Math.round(((dsFullyAvailable + dsPartiallyAvailable) / totalSubmitted) * 100)
+      : 0;
+    const dsWeightedNumerator = dsFullyAvailable * 1 + dsPartiallyAvailable * 0.5;
+    const dsAiReplyWeightedValue = totalSubmitted > 0
+      ? Math.round((dsWeightedNumerator / totalSubmitted) * 100)
+      : 0;
+
+    const gptFullyAvailable = distributions.gptReplyQuality['完全可用'];
+    const gptPartiallyAvailable = distributions.gptReplyQuality['部分可用'];
+    const gptAiReplyBasicValue = totalSubmitted > 0
+      ? Math.round(((gptFullyAvailable + gptPartiallyAvailable) / totalSubmitted) * 100)
+      : 0;
+    const gptWeightedNumerator = gptFullyAvailable * 1 + gptPartiallyAvailable * 0.5;
+    const gptAiReplyWeightedValue = totalSubmitted > 0
+      ? Math.round((gptWeightedNumerator / totalSubmitted) * 100)
+      : 0;
+
     return NextResponse.json({
       success: true,
       data: {
@@ -168,6 +234,7 @@ export async function GET(request: NextRequest, { params }: Params) {
           name: batch.name,
           totalCount: batch.totalCount,
           completedCount: batch.completedCount,
+          mode: batch.mode,
         },
         mainMetric: {
           aiReplyWeighted: {
@@ -181,6 +248,36 @@ export async function GET(request: NextRequest, { params }: Params) {
             numerator: fullyAvailable + partiallyAvailable,
             denominator: totalSubmitted,
             noData: totalSubmitted === 0,
+          },
+        },
+        compareMetrics: {
+          deepseek: {
+            aiReplyWeighted: {
+              value: dsAiReplyWeightedValue,
+              numerator: dsWeightedNumerator,
+              denominator: totalSubmitted,
+              noData: totalSubmitted === 0,
+            },
+            aiReplyBasic: {
+              value: dsAiReplyBasicValue,
+              numerator: dsFullyAvailable + dsPartiallyAvailable,
+              denominator: totalSubmitted,
+              noData: totalSubmitted === 0,
+            },
+          },
+          gpt: {
+            aiReplyWeighted: {
+              value: gptAiReplyWeightedValue,
+              numerator: gptWeightedNumerator,
+              denominator: totalSubmitted,
+              noData: totalSubmitted === 0,
+            },
+            aiReplyBasic: {
+              value: gptAiReplyBasicValue,
+              numerator: gptFullyAvailable + gptPartiallyAvailable,
+              denominator: totalSubmitted,
+              noData: totalSubmitted === 0,
+            },
           },
         },
         processMetrics: {

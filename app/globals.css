@@ -180,33 +180,33 @@
 
 /* 原始输入卡片 - 统一卡片风格 */
 .original-input-card {
-  @apply bg-white p-5;
-  border-radius: 16px;
+  @apply bg-white p-3;
+  border-radius: 12px;
   border: 1px solid #dadce0;
   box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05);
-  margin-bottom: 16px;
+  margin-bottom: 8px;
 }
 
 /* 用户输入高亮区域 */
 .query-highlight-section {
-  margin-bottom: 16px;
+  margin-bottom: 8px;
 }
 
 .query-label {
   color: #202124;
   font-size: 16px;
   font-weight: 500;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 
 .query-content {
   color: #1a73e8;
   background: #e8f0fe;
   border-radius: 8px;
-  padding: 16px;
-  font-size: 15px;
+  padding: 8px 12px;
+  font-size: 14px;
   font-weight: 400;
-  line-height: 1.6;
+  line-height: 1.5;
   border: 1px solid transparent;
   word-wrap: break-word;
   overflow-wrap: break-word;

@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { name, annotators, samples } = body;
+    const { name, annotators, samples, mode = 'normal' } = body;
 
     // Step 2: 参数校验
     console.log('[POST /api/batches] Step 2: 参数校验...');
@@ -168,6 +168,7 @@ export async function POST(request: NextRequest) {
             annotators: JSON.stringify(validAnnotators),
             totalCount: totalSamples,
             status: 'in_progress',
+            mode: mode,
           },
         });
         console.log('[POST /api/batches] Step 5.1: Batch 创建成功, ID:', newBatch.id);
@@ -178,6 +179,22 @@ export async function POST(request: NextRequest) {
           const annotatorIndex = Math.floor(index / samplesPerAnnotator);
           const assignedTo = validAnnotators[Math.min(annotatorIndex, validAnnotators.length - 1)];
 
+          let deepseekOutput = null;
+          let gptOutput = null;
+          const actualOutput = toString(sample['output_actual_output']);
+          
+          if (mode === 'compare' && actualOutput) {
+            const separator = '----------- 下面是GPT --------';
+            const parts = actualOutput.split(separator);
+            if (parts.length > 1) {
+              deepseekOutput = parts[0].trim();
+              gptOutput = parts.slice(1).join(separator).trim();
+            } else {
+              deepseekOutput = actualOutput.trim();
+              gptOutput = ''; // Missing separator
+            }
+          }
+
           return {
             batchId: newBatch.id,
             sequence: index + 1,
@@ -187,7 +204,9 @@ export async function POST(request: NextRequest) {
             inputStep: toString(sample['input_step']),
             inputObject: toString(sample['input_object']),
             inputStatus: toString(sample['input_status']),
-            outputActualOutput: toString(sample['output_actual_output']),
+            outputActualOutput: actualOutput,
+            deepseekOutput,
+            gptOutput,
             nodeZhiShangRAGRerank: toString(sample['node_ZhiShangRAGRerank_zIOZ_output']),
             nodeScriptUncA: toString(sample['node_Script_uncA_output']),
             nodeScriptHbh1: toString(sample['node_Script_hBH1_output']),

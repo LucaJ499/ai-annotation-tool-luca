@@ -19,6 +19,14 @@ export async function POST(request: NextRequest) {
       remark,
       actionSuggestionRelevant,
       guessQuestionsOk,
+      deepseekQuality,
+      deepseekUnavailableReasons,
+      deepseekRemark,
+      gptQuality,
+      gptUnavailableReasons,
+      gptRemark,
+      compareResult,
+      compareReason,
     } = body;
 
     if (!sampleId || !batchId || !annotator) {
@@ -51,6 +59,14 @@ export async function POST(request: NextRequest) {
             remark: remark || null,
             actionSuggestionRelevant: actionSuggestionRelevant || null,
             guessQuestionsOk: guessQuestionsOk || null,
+            deepseekQuality: deepseekQuality || null,
+            deepseekUnavailableReasons: JSON.stringify(deepseekUnavailableReasons || []),
+            deepseekRemark: deepseekRemark || null,
+            gptQuality: gptQuality || null,
+            gptUnavailableReasons: JSON.stringify(gptUnavailableReasons || []),
+            gptRemark: gptRemark || null,
+            compareResult: compareResult || null,
+            compareReason: compareReason || null,
             annotatedAt: new Date(),
           },
         });
@@ -71,6 +87,14 @@ export async function POST(request: NextRequest) {
             remark: remark || null,
             actionSuggestionRelevant: actionSuggestionRelevant || null,
             guessQuestionsOk: guessQuestionsOk || null,
+            deepseekQuality: deepseekQuality || null,
+            deepseekUnavailableReasons: JSON.stringify(deepseekUnavailableReasons || []),
+            deepseekRemark: deepseekRemark || null,
+            gptQuality: gptQuality || null,
+            gptUnavailableReasons: JSON.stringify(gptUnavailableReasons || []),
+            gptRemark: gptRemark || null,
+            compareResult: compareResult || null,
+            compareReason: compareReason || null,
           },
         });
       }

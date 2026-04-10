@@ -16,6 +16,7 @@ model Batch {
   completedCount  Int           @default(0)
   annotators      String        // JSON array of annotator names
   status          String        @default("pending") // pending, in_progress, completed
+  mode            String        @default("normal") // normal, compare
   
   samples         Sample[]
   annotations     Annotation[]
@@ -39,6 +40,10 @@ model Sample {
   nodeScriptTezR      String?     // node_Script_tezR_output -> AI打标意图分类（新增）
   nodeScriptORfz      String?     // node_Script_oRFz_output -> AI打标意图分类原因（新增）
   nodeZhiShangRAGRerank String?   // node_ZhiShangRAGRerank_zIOZ_output -> AI召回知识结果
+  
+  // 派生字段（对比模式）
+  deepseekOutput      String?
+  gptOutput           String?
   
   // 分配信息
   assignedTo        String        // 分配给哪位标注人
@@ -69,6 +74,16 @@ model Annotation {
   remark              String?       // H. 备注
   actionSuggestionRelevant String?  // I. 行动建议内容是否相关: 是 / 否
   guessQuestionsOk    String?       // J. 猜你想问至少不离谱: 是 / 否
+  
+  // 新增字段（对比模式）
+  deepseekQuality             String?       // deepseek回复质量
+  deepseekUnavailableReasons  String?       // deepseek不可用原因 (JSON array)
+  deepseekRemark              String?       // deepseek备注
+  gptQuality                  String?       // gpt回复质量
+  gptUnavailableReasons       String?       // gpt不可用原因 (JSON array)
+  gptRemark                   String?       // gpt备注
+  compareResult               String?       // 对比效果
+  compareReason               String?       // 原因说明
   
   // 元信息
   annotator           String        // 标注人

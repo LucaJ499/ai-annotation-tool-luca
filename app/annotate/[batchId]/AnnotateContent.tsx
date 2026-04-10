@@ -3,7 +3,7 @@
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Save } from 'lucide-react';
+import { ArrowLeft, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Save, Info } from 'lucide-react';
 import { parseKnowledgeRecall, KnowledgeFragment, truncateText, processContentNewlines } from '@/lib/formatters/knowledgeRecall';
 import { parseActionSuggestion, FormattedActionSuggestion, truncateActionContent } from '@/lib/formatters/actionSuggestion';
 import { parseSuggestedQuestions, FormattedSuggestedQuestions } from '@/lib/formatters/suggestedQuestions';
@@ -21,6 +21,8 @@ interface Sample {
   inputObject: string | null;
   inputStatus: string | null;
   outputActualOutput: string | null;
+  deepseekOutput?: string | null;
+  gptOutput?: string | null;
   nodeZhiShangRAGRerank: string | null;
   nodeScriptUncA: string | null;
   nodeScriptHbh1: string | null;
@@ -38,6 +40,14 @@ interface Sample {
     remark: string | null;
     actionSuggestionRelevant: string | null;
     guessQuestionsOk: string | null;
+    deepseekQuality?: string | null;
+    deepseekUnavailableReasons?: string;
+    deepseekRemark?: string | null;
+    gptQuality?: string | null;
+    gptUnavailableReasons?: string;
+    gptRemark?: string | null;
+    compareResult?: string | null;
+    compareReason?: string | null;
   } | null;
 }
 
@@ -70,6 +80,20 @@ export default function AnnotateContent() {
   const [unavailableReasons, setUnavailableReasons] = useState<string[]>([]);
   const [remark, setRemark] = useState('');
   const [actionSuggestionRelevant, setActionSuggestionRelevant] = useState('');
+
+  const [batchMode, setBatchMode] = useState<'normal' | 'compare'>('normal');
+  const [deepseekQuality, setDeepseekQuality] = useState('');
+  const [deepseekUnavailableReasons, setDeepseekUnavailableReasons] = useState<string[]>([]);
+  const [deepseekRemark, setDeepseekRemark] = useState('');
+  const [gptQuality, setGptQuality] = useState('');
+  const [gptUnavailableReasons, setGptUnavailableReasons] = useState<string[]>([]);
+  const [gptRemark, setGptRemark] = useState('');
+  const [compareResult, setCompareResult] = useState('');
+  const [compareReason, setCompareReason] = useState('');
+
+  const [deepseekOutputFmt, setDeepseekOutputFmt] = useState<FormattedAIOutput | null>(null);
+  const [gptOutputFmt, setGptOutputFmt] = useState<FormattedAIOutput | null>(null);
+
   const [guessQuestionsOk, setGuessQuestionsOk] = useState('');
 
   // 状态控制
@@ -105,9 +129,10 @@ export default function AnnotateContent() {
       const result = await response.json();
 
       if (result.success && result.data) {
-        const { sample: newSample, progress: newProgress, isAllCompleted } = result.data;
+        const { sample: newSample, progress: newProgress, isAllCompleted, batchMode: mode } = result.data;
         setSample(newSample);
         setProgress(newProgress);
+        setBatchMode(mode);
 
         // 若全部完成且为首次进入，则提示
         if (isAllCompleted && currentSequence === 0) {
@@ -130,7 +155,19 @@ export default function AnnotateContent() {
               : []
           );
           setRemark(newSample.annotation.remark || '');
-          setActionSuggestionRelevant(newSample.annotation.actionSuggestionRelevant || '');
+                    setActionSuggestionRelevant(newSample.annotation.actionSuggestionRelevant || '');
+          setGuessQuestionsOk(newSample.annotation.guessQuestionsOk || '');
+          
+          setDeepseekQuality(newSample.annotation.deepseekQuality || '');
+          setDeepseekUnavailableReasons(newSample.annotation.deepseekUnavailableReasons ? JSON.parse(newSample.annotation.deepseekUnavailableReasons) : []);
+          setDeepseekRemark(newSample.annotation.deepseekRemark || '');
+          
+          setGptQuality(newSample.annotation.gptQuality || '');
+          setGptUnavailableReasons(newSample.annotation.gptUnavailableReasons ? JSON.parse(newSample.annotation.gptUnavailableReasons) : []);
+          setGptRemark(newSample.annotation.gptRemark || '');
+          
+          setCompareResult(newSample.annotation.compareResult || '');
+          setCompareReason(newSample.annotation.compareReason || '');
           setGuessQuestionsOk(newSample.annotation.guessQuestionsOk || '');
         } else {
           // 重置表单
@@ -142,7 +179,17 @@ export default function AnnotateContent() {
           setReplyQuality('');
           setUnavailableReasons([]);
           setRemark('');
-          setActionSuggestionRelevant('');
+                    setActionSuggestionRelevant('');
+          setGuessQuestionsOk('');
+          
+          setDeepseekQuality('');
+          setDeepseekUnavailableReasons([]);
+          setDeepseekRemark('');
+          setGptQuality('');
+          setGptUnavailableReasons([]);
+          setGptRemark('');
+          setCompareResult('');
+          setCompareReason('');
           setGuessQuestionsOk('');
         }
 
@@ -158,6 +205,18 @@ export default function AnnotateContent() {
           setAiOutput(parseAIOutput(newSample.outputActualOutput));
         } else {
           setAiOutput(null);
+        }
+        
+        if (newSample.deepseekOutput) {
+          setDeepseekOutputFmt(parseAIOutput(newSample.deepseekOutput));
+        } else {
+          setDeepseekOutputFmt(null);
+        }
+        
+        if (newSample.gptOutput) {
+          setGptOutputFmt(parseAIOutput(newSample.gptOutput));
+        } else {
+          setGptOutputFmt(null);
         }
 
         // 格式化行动建议内容
@@ -213,6 +272,14 @@ export default function AnnotateContent() {
           remark,
           actionSuggestionRelevant,
           guessQuestionsOk,
+          deepseekQuality,
+          deepseekUnavailableReasons: ['部分可用', '完全不可用'].includes(deepseekQuality) ? deepseekUnavailableReasons : [],
+          deepseekRemark,
+          gptQuality,
+          gptUnavailableReasons: ['部分可用', '完全不可用'].includes(gptQuality) ? gptUnavailableReasons : [],
+          gptRemark,
+          compareResult,
+          compareReason,
         }),
       });
 
@@ -328,64 +395,40 @@ export default function AnnotateContent() {
       ) : !sample ? (
         <div className="flex-1 flex items-center justify-center text-gray-500">暂无数据</div>
       ) : (
-        <div className="flex-1 three-column-layout">
+        <div className="flex-1 three-column-layout min-h-0">
           {/* 第一列：用户问题与 AI 输出 */}
-          <div className="column-qa">
-            {/* Sticky 原始输入区块 */}
-            <div className="sticky-query-section">
-              <div className="original-input-card">
-                {/* 用户输入 - 视觉重点 */}
-                <div className="query-highlight-section">
-                  <div className="query-label">{FIELD_MAPPING['input_input']}</div>
-                  <div className="query-content">
-                    {sample.inputInput || '-'}
-                  </div>
-                </div>
-
-                {/* 辅助信息区域 (可折叠) */}
-                <div className="meta-info-container">
-                  <div 
-                    className="meta-info-header cursor-pointer flex items-center justify-between py-2 border-t border-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
-                    onClick={() => setIsMetaExpanded(!isMetaExpanded)}
-                  >
-                    <span className="text-sm font-medium flex items-center gap-1">
-                      附加信息 (意图/阶段/状态等)
-                    </span>
-                    {isMetaExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                  </div>
-
-                  {isMetaExpanded && (
-                    <div className="auxiliary-info-grid mt-0 border-t-0 pt-2 pb-2">
-                      <div className="auxiliary-item">
-                        <span className="auxiliary-label">{FIELD_MAPPING['input_expect_classfiy']}</span>
-                        <span className="auxiliary-value">{sample.inputExpectClassfiy || '-'}</span>
-                      </div>
-                      <div className="auxiliary-item">
-                        <span className="auxiliary-label">{FIELD_MAPPING['input_step']}</span>
-                        <span className="auxiliary-value">{sample.inputStep || '-'}</span>
-                      </div>
-                      <div className="auxiliary-item">
-                        <span className="auxiliary-label">{FIELD_MAPPING['input_object']}</span>
-                        <span className="auxiliary-value">{sample.inputObject || '-'}</span>
-                      </div>
-                      <div className="auxiliary-item">
-                        <span className="auxiliary-label">{FIELD_MAPPING['input_status']}</span>
-                        <span className="auxiliary-value">{sample.inputStatus || '-'}</span>
+          <div className="column-qa flex flex-col h-full relative z-20">
+            {/* 顶部的用户输入（Sticky固定） */}
+            <div className="w-full mb-3 flex-shrink-0 sticky top-0 z-[60] bg-[#f8fafc] pt-2 pb-1">
+              <div className="original-input-card pb-2 shadow-sm border border-gray-200 bg-white">
+                <div className="query-highlight-section mb-0 flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="query-label flex items-center gap-2 mb-1">
+                      {FIELD_MAPPING['input_input']}
+                      <div className="relative group cursor-help z-[100]">
+                        <Info className="w-4 h-4 text-gray-400 hover:text-blue-500" />
+                        <div className="absolute left-0 top-full mt-2 w-80 max-w-[calc(100vw-2rem)] p-3 bg-white border border-gray-200 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-[100] pointer-events-none text-sm break-words whitespace-normal">
+                          <div className="space-y-2">
+                            <div className="flex justify-between"><span className="text-gray-500">{FIELD_MAPPING['__system_internal_id__']}:</span><span className="text-gray-900 font-mono">{sample.systemInternalId || '-'}</span></div>
+                            <div className="flex justify-between"><span className="text-gray-500">{FIELD_MAPPING['input_expect_classfiy']}:</span><span className="text-gray-900">{sample.inputExpectClassfiy || '-'}</span></div>
+                            <div className="flex justify-between"><span className="text-gray-500">{FIELD_MAPPING['input_step']}:</span><span className="text-gray-900">{sample.inputStep || '-'}</span></div>
+                            <div className="flex justify-between"><span className="text-gray-500">{FIELD_MAPPING['input_object']}:</span><span className="text-gray-900">{sample.inputObject || '-'}</span></div>
+                            <div className="flex justify-between"><span className="text-gray-500">{FIELD_MAPPING['input_status']}:</span><span className="text-gray-900">{sample.inputStatus || '-'}</span></div>
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  )}
-                </div>
-
-                {/* 用户提问ID - 弱化展示 */}
-                <div className="sample-id-section">
-                  <span className="sample-id-label">{FIELD_MAPPING['__system_internal_id__']}</span>
-                  <span className="sample-id-value">{sample.systemInternalId || '-'}</span>
+                    <div className="query-content text-sm line-clamp-3 overflow-hidden">
+                      {sample.inputInput || '-'}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
 
             {/* 下方滚动内容区域 */}
-            <div className="column-scroll-content">
+            <div className="column-scroll-content flex-1 overflow-y-auto relative z-20">
+              
               {/* AI打标意图分类 */}
               {(sample.nodeScriptTezR || sample.nodeScriptORfz) && (
                 <div className="info-card">
@@ -406,156 +449,83 @@ export default function AnnotateContent() {
               )}
 
               {/* AI最终输出 */}
-              <div className="info-card">
-                <h3 className="card-title">{FIELD_MAPPING['output_actual_output']}</h3>
-                {aiOutput ? (
-                  aiOutput.success ? (
-                    <div className="space-y-4">
-                      <div 
-                        className="ai-output-content"
-                        dangerouslySetInnerHTML={{ __html: aiOutput.content }}
-                      />
-                      {aiOutput.references.length > 0 && (
-                        <div className="border-t pt-4 mt-4">
-                          <h4 className="text-sm font-medium text-gray-700 mb-2">参考来源</h4>
-                          <ul className="space-y-1">
-                            {aiOutput.references.map((ref) => (
-                              <li key={ref.index} className="text-sm">
-                                <span className="text-blue-600 font-medium">[{ref.index}]</span>{' '}
-                                {ref.url ? (
-                                  <a href={ref.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-                                    {ref.title}
-                                  </a>
-                                ) : (
-                                  <span className="text-gray-700">{ref.title}</span>
-                                )}
-                              </li>
-                            ))}
-                          </ul>
+              {batchMode === 'compare' ? (
+                <div className="flex flex-col gap-4">
+                  {/* DeepSeek 输出 */}
+                  <div className="info-card border-blue-200 shadow-sm relative">
+                    <div className="absolute top-0 right-0 bg-blue-100 text-blue-800 text-xs font-bold px-3 py-1 rounded-bl-lg rounded-tr-xl">DeepSeek</div>
+                    <h3 className="card-title text-blue-800 flex items-center gap-2">DeepSeek 输出</h3>
+                    {deepseekOutputFmt ? (
+                      deepseekOutputFmt.success ? (
+                        <div className="space-y-4">
+                          <div className="ai-output-content" dangerouslySetInnerHTML={{ __html: deepseekOutputFmt.content }} />
+                          {deepseekOutputFmt.references.length > 0 && (
+                            <div className="border-t border-blue-100 pt-4 mt-4">
+                              <h4 className="text-sm font-medium text-gray-700 mb-2">参考来源</h4>
+                              <ul className="space-y-1">
+                                {deepseekOutputFmt.references.map((ref) => (
+                                  <li key={ref.index} className="text-sm">
+                                    <span className="text-blue-600 font-medium">[{ref.index}]</span>{' '}
+                                    {ref.url ? <a href={ref.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">{ref.title}</a> : <span className="text-gray-700">{ref.title}</span>}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="field-content">{aiOutput.raw}</div>
-                  )
-                ) : (
-                  <div className="text-gray-400">无数据</div>
-                )}
-              </div>
-
-              {/* 行动建议内容 */}
-              {actionSuggestion && actionSuggestion.raw && (
-                <div className="info-card">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="card-title">{FIELD_MAPPING['node_Script_uncA_output']}</h3>
-                    <button
-                      onClick={() => setShowRawAction(!showRawAction)}
-                      className="text-xs text-gray-500 hover:text-gray-700 underline"
-                    >
-                      {showRawAction ? '查看格式化' : '查看原始内容'}
-                    </button>
+                      ) : <div className="field-content">{deepseekOutputFmt.raw}</div>
+                    ) : <div className="text-gray-400">无数据</div>}
                   </div>
 
-                  {showRawAction ? (
-                    <div className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto">
-                      <pre className="text-xs whitespace-pre-wrap break-all">{actionSuggestion.raw}</pre>
-                    </div>
-                  ) : (
-                    actionSuggestion.success && actionSuggestion.data ? (
-                      <div className="space-y-4">
-                        {actionSuggestion.data.content && (
-                          <div>
-                            <div
-                              className="recall-fragment-text"
-                              style={{ maxHeight: expandedAction ? 'none' : '150px', overflow: 'hidden' }}
-                            >
-                              {expandedAction
-                                ? actionSuggestion.data.content
-                                : truncateActionContent(actionSuggestion.data.content, 300).text}
+                  {/* GPT 输出 */}
+                  <div className="info-card border-purple-200 shadow-sm relative">
+                    <div className="absolute top-0 right-0 bg-purple-100 text-purple-800 text-xs font-bold px-3 py-1 rounded-bl-lg rounded-tr-xl">GPT</div>
+                    <h3 className="card-title text-purple-800 flex items-center gap-2">GPT 输出</h3>
+                    {gptOutputFmt ? (
+                      gptOutputFmt.success ? (
+                        <div className="space-y-4">
+                          <div className="ai-output-content" dangerouslySetInnerHTML={{ __html: gptOutputFmt.content }} />
+                          {gptOutputFmt.references.length > 0 && (
+                            <div className="border-t border-purple-100 pt-4 mt-4">
+                              <h4 className="text-sm font-medium text-gray-700 mb-2">参考来源</h4>
+                              <ul className="space-y-1">
+                                {gptOutputFmt.references.map((ref) => (
+                                  <li key={ref.index} className="text-sm">
+                                    <span className="text-blue-600 font-medium">[{ref.index}]</span>{' '}
+                                    {ref.url ? <a href={ref.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">{ref.title}</a> : <span className="text-gray-700">{ref.title}</span>}
+                                  </li>
+                                ))}
+                              </ul>
                             </div>
-                            {actionSuggestion.data.content.length > 300 && (
-                              <button
-                                onClick={() => setExpandedAction(!expandedAction)}
-                                className="text-sm text-blue-600 hover:text-blue-700 mt-2 font-medium"
-                              >
-                                {expandedAction ? '收起' : '展开更多'}
-                              </button>
-                            )}
-                          </div>
-                        )}
-                        {actionSuggestion.data.buttons.length > 0 && (
-                          <div className="bg-blue-50 rounded-lg p-3">
-                            <div className="text-xs text-blue-700 font-medium mb-2">建议动作：</div>
-                            <div className="flex flex-wrap gap-2">
-                              {actionSuggestion.data.buttons.map((button, idx) => (
-                                <span
-                                  key={idx}
-                                  className="action-button"
-                                >
-                                  {button}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="bg-gray-50 p-4 rounded-lg">
-                        <div className="text-sm text-gray-600 mb-2">内容解析失败，显示原始文本：</div>
-                        <div className="text-sm text-gray-800 whitespace-pre-wrap break-words">
-                          {actionSuggestion.raw.replace(/\\n/g, '\n').replace(/\\"/g, '"').slice(0, 500)}
-                          {actionSuggestion.raw.length > 500 ? '...' : ''}
+                          )}
                         </div>
-                      </div>
-                    )
-                  )}
+                      ) : <div className="field-content">{gptOutputFmt.raw}</div>
+                    ) : <div className="text-gray-400">未匹配到 GPT 输出内容</div>}
+                  </div>
                 </div>
-              )}
-
-              {/* 猜你想问内容 */}
-              {suggestedQuestions && suggestedQuestions.raw && (
+              ) : (
                 <div className="info-card">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="card-title">{FIELD_MAPPING['node_Script_hBH1_output']}</h3>
-                    <button
-                      onClick={() => setShowRawQuestions(!showRawQuestions)}
-                      className="text-xs text-gray-500 hover:text-gray-700 underline"
-                    >
-                      {showRawQuestions ? '查看格式化' : '查看原始内容'}
-                    </button>
-                  </div>
-
-                  {showRawQuestions ? (
-                    <div className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto">
-                      <pre className="text-xs whitespace-pre-wrap break-all">{suggestedQuestions.raw}</pre>
-                    </div>
-                  ) : (
-                    suggestedQuestions.success && suggestedQuestions.questions.length > 0 ? (
-                      <div className="space-y-2">
-                        {suggestedQuestions.questions.map((question, idx) => (
-                          <div
-                            key={idx}
-                            className="suggested-question-item"
-                          >
-                            <span className="suggested-question-number">
-                              {idx + 1}
-                            </span>
-                            <span className="suggested-question-text">
-                              {question.title}
-                            </span>
+                  <h3 className="card-title">{FIELD_MAPPING['output_actual_output']}</h3>
+                  {aiOutput ? (
+                    aiOutput.success ? (
+                      <div className="space-y-4">
+                        <div className="ai-output-content" dangerouslySetInnerHTML={{ __html: aiOutput.content }} />
+                        {aiOutput.references.length > 0 && (
+                          <div className="border-t pt-4 mt-4">
+                            <h4 className="text-sm font-medium text-gray-700 mb-2">参考来源</h4>
+                            <ul className="space-y-1">
+                              {aiOutput.references.map((ref) => (
+                                <li key={ref.index} className="text-sm">
+                                  <span className="text-blue-600 font-medium">[{ref.index}]</span>{' '}
+                                  {ref.url ? <a href={ref.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">{ref.title}</a> : <span className="text-gray-700">{ref.title}</span>}
+                                </li>
+                              ))}
+                            </ul>
                           </div>
-                        ))}
+                        )}
                       </div>
-                    ) : (
-                      <div className="bg-gray-50 p-4 rounded-lg">
-                        <div className="text-sm text-gray-600 mb-2">内容解析失败，显示原始文本：</div>
-                        <div className="text-sm text-gray-800 whitespace-pre-wrap break-words">
-                          {suggestedQuestions.raw.replace(/\\n/g, '\n').replace(/\\"/g, '"').slice(0, 500)}
-                          {suggestedQuestions.raw.length > 500 ? '...' : ''}
-                        </div>
-                      </div>
-                    )
-                  )}
+                    ) : <div className="field-content">{aiOutput.raw}</div>
+                  ) : <div className="text-gray-400">无数据</div>}
                 </div>
               )}
             </div>
@@ -678,6 +648,123 @@ export default function AnnotateContent() {
                   )
                 )}
               </div>
+            
+              {/* 行动建议内容 */}
+              {actionSuggestion && actionSuggestion.raw && (
+                <div className="info-card">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="card-title">{FIELD_MAPPING['node_Script_uncA_output']}</h3>
+                    <button
+                      onClick={() => setShowRawAction(!showRawAction)}
+                      className="text-xs text-gray-500 hover:text-gray-700 underline"
+                    >
+                      {showRawAction ? '查看格式化' : '查看原始内容'}
+                    </button>
+                  </div>
+
+                  {showRawAction ? (
+                    <div className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto">
+                      <pre className="text-xs whitespace-pre-wrap break-all">{actionSuggestion.raw}</pre>
+                    </div>
+                  ) : (
+                    actionSuggestion.success && actionSuggestion.data ? (
+                      <div className="space-y-4">
+                        {actionSuggestion.data.content && (
+                          <div>
+                            <div
+                              className="recall-fragment-text"
+                              style={{ maxHeight: expandedAction ? 'none' : '150px', overflow: 'hidden' }}
+                            >
+                              {expandedAction
+                                ? actionSuggestion.data.content
+                                : truncateActionContent(actionSuggestion.data.content, 300).text}
+                            </div>
+                            {actionSuggestion.data.content.length > 300 && (
+                              <button
+                                onClick={() => setExpandedAction(!expandedAction)}
+                                className="text-sm text-blue-600 hover:text-blue-700 mt-2 font-medium"
+                              >
+                                {expandedAction ? '收起' : '展开更多'}
+                              </button>
+                            )}
+                          </div>
+                        )}
+                        {actionSuggestion.data.buttons.length > 0 && (
+                          <div className="bg-blue-50 rounded-lg p-3">
+                            <div className="text-xs text-blue-700 font-medium mb-2">建议动作：</div>
+                            <div className="flex flex-wrap gap-2">
+                              {actionSuggestion.data.buttons.map((button, idx) => (
+                                <span
+                                  key={idx}
+                                  className="action-button"
+                                >
+                                  {button}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="bg-gray-50 p-4 rounded-lg">
+                        <div className="text-sm text-gray-600 mb-2">内容解析失败，显示原始文本：</div>
+                        <div className="text-sm text-gray-800 whitespace-pre-wrap break-words">
+                          {actionSuggestion.raw.replace(/\\n/g, '\n').replace(/\\"/g, '"').slice(0, 500)}
+                          {actionSuggestion.raw.length > 500 ? '...' : ''}
+                        </div>
+                      </div>
+                    )
+                  )}
+                </div>
+              )}
+
+              {/* 猜你想问内容 - 移动到此处 */}
+              {suggestedQuestions && suggestedQuestions.raw && (
+                <div className="info-card">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="card-title">{FIELD_MAPPING['node_Script_hBH1_output']}</h3>
+                    <button
+                      onClick={() => setShowRawQuestions(!showRawQuestions)}
+                      className="text-xs text-gray-500 hover:text-gray-700 underline"
+                    >
+                      {showRawQuestions ? '查看格式化' : '查看原始内容'}
+                    </button>
+                  </div>
+
+                  {showRawQuestions ? (
+                    <div className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto">
+                      <pre className="text-xs whitespace-pre-wrap break-all">{suggestedQuestions.raw}</pre>
+                    </div>
+                  ) : (
+                    suggestedQuestions.success && suggestedQuestions.questions.length > 0 ? (
+                      <div className="space-y-2">
+                        {suggestedQuestions.questions.map((question, idx) => (
+                          <div
+                            key={idx}
+                            className="suggested-question-item"
+                          >
+                            <span className="suggested-question-number">
+                              {idx + 1}
+                            </span>
+                            <span className="suggested-question-text">
+                              {question.title}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="bg-gray-50 p-4 rounded-lg">
+                        <div className="text-sm text-gray-600 mb-2">内容解析失败，显示原始文本：</div>
+                        <div className="text-sm text-gray-800 whitespace-pre-wrap break-words">
+                          {suggestedQuestions.raw.replace(/\\n/g, '\n').replace(/\\"/g, '"').slice(0, 500)}
+                          {suggestedQuestions.raw.length > 500 ? '...' : ''}
+                        </div>
+                      </div>
+                    )
+                  )}
+                </div>
+              )}
+              
             </div>
           </div>
 
@@ -687,7 +774,14 @@ export default function AnnotateContent() {
               <h3 className="card-title" style={{ fontSize: '18px', marginBottom: '24px' }}>标注</h3>
 
               <div className="space-y-6">
-                {/* A. 是否为意图清晰问题 */}
+                                {/* ================= 意图评估区 ================= */}
+                <div className="mb-6 pb-6 border-b border-gray-200">
+                  <h4 className="text-sm font-bold text-gray-700 mb-4 flex items-center gap-2">
+                    <span className="w-1.5 h-4 bg-indigo-500 rounded-full"></span>
+                    意图评估
+                  </h4>
+                  <div className="space-y-6">
+{/* A. 是否为意图清晰问题 */}
                 <div className="form-section">
                   <label className="form-label">{ANNOTATION_FIELDS.isClearIntent.label}</label>
                   <div className="form-options">
@@ -727,7 +821,17 @@ export default function AnnotateContent() {
                   </div>
                 </div>
 
-                {/* C. 知识库内是否有知识 */}
+                                  </div>
+                </div>
+
+                {/* ================= 知识评估区 ================= */}
+                <div className="mb-6 pb-6 border-b border-gray-200">
+                  <h4 className="text-sm font-bold text-gray-700 mb-4 flex items-center gap-2">
+                    <span className="w-1.5 h-4 bg-teal-500 rounded-full"></span>
+                    知识评估
+                  </h4>
+                  <div className="space-y-6">
+{/* C. 知识库内是否有知识 */}
                 <div className="form-section">
                   <label className="form-label">{ANNOTATION_FIELDS.hasKnowledge.label}</label>
                   <div className="form-options">
@@ -781,58 +885,145 @@ export default function AnnotateContent() {
                   </div>
                 </div>
 
-                {/* F. AI回复质量 */}
-                <div className="form-section">
-                  <label className="form-label">{ANNOTATION_FIELDS.replyQuality.label}</label>
-                  <div className="form-options">
-                    {ANNOTATION_FIELDS.replyQuality.options.map((option) => (
-                      <label key={option} className="radio-label" title={ANNOTATION_FIELDS.replyQuality.tooltips[option]}>
-                        <input
-                          type="radio"
-                          name="replyQuality"
-                          value={option}
-                          checked={replyQuality === option}
-                          onChange={(e) => setReplyQuality(e.target.value)}
-                          className="text-blue-600"
-                        />
-                        <span>{option}</span>
-                      </label>
-                    ))}
-                  </div>
+                                                  </div>
                 </div>
-
-                {/* G. 不可用原因 */}
-                {['部分可用', '完全不可用'].includes(replyQuality) && (
-                  <div className="form-section">
-                    <label className="form-label">{ANNOTATION_FIELDS.unavailableReasons.label}</label>
-                    <div className="form-options">
-                      {UNAVAILABLE_REASONS.map((reason) => (
-                        <label key={reason} className="checkbox-label">
-                          <input
-                            type="checkbox"
-                            checked={unavailableReasons.includes(reason)}
-                            onChange={() => handleReasonToggle(reason)}
-                            className="text-blue-600 rounded"
-                          />
-                          <span>{reason}</span>
-                        </label>
-                      ))}
+                {/* ================= AI回复评估区 ================= */}
+                <div className="mb-6 pb-6 border-b border-gray-200">
+                  <h4 className="text-sm font-bold text-gray-700 mb-4 flex items-center gap-2">
+                    <span className="w-1.5 h-4 bg-blue-500 rounded-full"></span>
+                    AI 回复评估
+                  </h4>
+                  {batchMode === 'compare' ? (
+                  <>
+                    {/* DeepSeek 独立评估 */}
+                    <div className="form-section p-4 bg-blue-50 rounded-xl border border-blue-100">
+                      <label className="form-label text-blue-900 font-bold mb-3">DeepSeek 回复质量</label>
+                      <div className="form-options">
+                        {ANNOTATION_FIELDS.replyQuality.options.map((option) => (
+                          <label key={option} className="radio-label">
+                            <input type="radio" name="deepseekQuality" value={option} checked={deepseekQuality === option} onChange={(e) => setDeepseekQuality(e.target.value)} className="text-blue-600" />
+                            <span>{option}</span>
+                          </label>
+                        ))}
+                      </div>
+                      
+                      {['部分可用', '完全不可用'].includes(deepseekQuality) && (
+                        <div className="mt-4 pt-4 border-t border-blue-200">
+                          <label className="form-label text-blue-900">DeepSeek 不可用原因</label>
+                          <div className="form-options">
+                            {UNAVAILABLE_REASONS.map((reason) => (
+                              <label key={reason} className="checkbox-label">
+                                <input type="checkbox" checked={deepseekUnavailableReasons.includes(reason)} onChange={() => setDeepseekUnavailableReasons((prev) => prev.includes(reason) ? prev.filter((r) => r !== reason) : [...prev, reason])} className="text-blue-600 rounded" />
+                                <span>{reason}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      
+                      <div className="mt-4 pt-4 border-t border-blue-200">
+                        <label className="form-label text-blue-900">DeepSeek 备注</label>
+                        <textarea className="form-textarea w-full text-sm" rows={2} value={deepseekRemark} onChange={(e) => setDeepseekRemark(e.target.value)} placeholder="记录DeepSeek特有的问题或备注" />
+                      </div>
                     </div>
-                  </div>
-                )}
 
-                {/* H. 备注 */}
-                <div className="form-section">
-                  <label className="form-label">{ANNOTATION_FIELDS.remark.label}</label>
-                  <textarea
-                    className="form-textarea"
-                    rows={3}
-                    value={remark}
-                    onChange={(e) => setRemark(e.target.value)}
-                    placeholder="可选填"
-                  />
+                    {/* GPT 独立评估 */}
+                    <div className="form-section p-4 bg-purple-50 rounded-xl border border-purple-100 mt-4">
+                      <label className="form-label text-purple-900 font-bold mb-3">GPT 回复质量</label>
+                      <div className="form-options">
+                        {ANNOTATION_FIELDS.replyQuality.options.map((option) => (
+                          <label key={option} className="radio-label">
+                            <input type="radio" name="gptQuality" value={option} checked={gptQuality === option} onChange={(e) => setGptQuality(e.target.value)} className="text-purple-600" />
+                            <span>{option}</span>
+                          </label>
+                        ))}
+                      </div>
+                      
+                      {['部分可用', '完全不可用'].includes(gptQuality) && (
+                        <div className="mt-4 pt-4 border-t border-purple-200">
+                          <label className="form-label text-purple-900">GPT 不可用原因</label>
+                          <div className="form-options">
+                            {UNAVAILABLE_REASONS.map((reason) => (
+                              <label key={reason} className="checkbox-label">
+                                <input type="checkbox" checked={gptUnavailableReasons.includes(reason)} onChange={() => setGptUnavailableReasons((prev) => prev.includes(reason) ? prev.filter((r) => r !== reason) : [...prev, reason])} className="text-purple-600 rounded" />
+                                <span>{reason}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      
+                      <div className="mt-4 pt-4 border-t border-purple-200">
+                        <label className="form-label text-purple-900">GPT 备注</label>
+                        <textarea className="form-textarea w-full text-sm" rows={2} value={gptRemark} onChange={(e) => setGptRemark(e.target.value)} placeholder="记录GPT特有的问题或备注" />
+                      </div>
+                    </div>
+                  {/* 对比效果 */}
+                  <div className="form-section p-4 bg-orange-50 rounded-xl border border-orange-200 mt-6 shadow-sm">
+                    <label className="form-label text-orange-900 font-bold text-base mb-3">🏅 对比效果</label>
+                    <select className="form-select w-full mb-4 border-orange-200 text-orange-900" value={compareResult} onChange={(e) => setCompareResult(e.target.value)}>
+                      <option value="">请选择对比效果...</option>
+                      <option value="GPT 显著胜出">GPT 显著胜出</option>
+                      <option value="GPT 小幅胜出">GPT 小幅胜出</option>
+                      <option value="效果一致（平局）">效果一致（平局）</option>
+                      <option value="DeepSeek 小幅胜出">DeepSeek 小幅胜出</option>
+                      <option value="DeepSeek 显著胜出">DeepSeek 显著胜出</option>
+                    </select>
+                    
+                    {compareResult && (
+                      <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+                        <label className="form-label text-orange-900 font-medium">📝 原因说明</label>
+                        <textarea className="form-textarea w-full text-sm border-orange-200 focus:border-orange-500 focus:ring-orange-500" rows={3} value={compareReason} onChange={(e) => setCompareReason(e.target.value)} placeholder="请简要说明为什么选择该对比结果..." />
+                      </div>
+                    )}
+                  </div>
+                  </>
+                ) : (
+                  <>
+                    {/* F. AI回复质量 */}
+                    <div className="form-section">
+                      <label className="form-label">{ANNOTATION_FIELDS.replyQuality.label}</label>
+                      <div className="form-options">
+                        {ANNOTATION_FIELDS.replyQuality.options.map((option) => (
+                          <label key={option} className="radio-label" title={ANNOTATION_FIELDS.replyQuality.tooltips[option]}>
+                            <input type="radio" name="replyQuality" value={option} checked={replyQuality === option} onChange={(e) => setReplyQuality(e.target.value)} className="text-blue-600" />
+                            <span>{option}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* G. 不可用原因 */}
+                    {['部分可用', '完全不可用'].includes(replyQuality) && (
+                      <div className="form-section">
+                        <label className="form-label">{ANNOTATION_FIELDS.unavailableReasons.label}</label>
+                        <div className="form-options">
+                          {UNAVAILABLE_REASONS.map((reason) => (
+                            <label key={reason} className="checkbox-label">
+                              <input type="checkbox" checked={unavailableReasons.includes(reason)} onChange={() => handleReasonToggle(reason)} className="text-blue-600 rounded" />
+                              <span>{reason}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* H. 备注 */}
+                    <div className="form-section">
+                      <label className="form-label">{ANNOTATION_FIELDS.remark.label}</label>
+                      <textarea className="form-textarea" rows={3} value={remark} onChange={(e) => setRemark(e.target.value)} placeholder="可选填" />
+                    </div>
+                  </>
+                )}
                 </div>
 
+                {/* ================= 其他评估区 ================= */}
+                <div>
+                  <h4 className="text-sm font-bold text-gray-700 mb-4 flex items-center gap-2">
+                    <span className="w-1.5 h-4 bg-orange-500 rounded-full"></span>
+                    其他评估
+                  </h4>
+                  <div className="space-y-6">
                 {/* I. 行动建议内容是否相关 */}
                 <div className="form-section">
                   <label className="form-label">{ANNOTATION_FIELDS.actionSuggestionRelevant.label}</label>
@@ -870,6 +1061,8 @@ export default function AnnotateContent() {
                         <span>{option}</span>
                       </label>
                     ))}
+                  </div>
+                </div>
                   </div>
                 </div>
               </div>

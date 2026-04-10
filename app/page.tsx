@@ -12,6 +12,7 @@ interface Batch {
   completedCount: number;
   annotators: string[];
   status: string;
+  mode?: string;
 }
 
 export default function HomePage() {
@@ -106,6 +107,9 @@ export default function HomePage() {
                       <h3 className="text-lg font-semibold text-gray-900">
                         {batch.name}
                       </h3>
+                      <span className={`px-2 py-1 text-xs rounded-full ${batch.mode === 'compare' ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-800'}`}>
+                        {batch.mode === 'compare' ? '对比模式' : '普通模式'}
+                      </span>
                       <span
                         className={`px-2 py-1 text-xs rounded-full ${
                           progress === 100

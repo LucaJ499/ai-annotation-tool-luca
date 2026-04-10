@@ -10,46 +10,63 @@ export default function NewBatchPage() {
   const router = useRouter();
   const [batchName, setBatchName] = useState('');
   const [annotators, setAnnotators] = useState<string[]>(['']);
+  const [mode, setMode] = useState<'normal' | 'compare'>('normal');
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<any[]>([]);
   const [detectedFields, setDetectedFields] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const [isParsing, setIsParsing] = useState(false);
   const [error, setError] = useState('');
   const [errorDetail, setErrorDetail] = useState('');
 
   const handleFileChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
+    
+    // 兼容性处理：重置 input 的 value，确保下次选择相同文件时也能触发 onChange 事件
+    e.target.value = '';
+
     if (!selectedFile) return;
 
-    setFile(selectedFile);
+    // 1. 触发数据重置操作，完全清除旧数据
+    setFile(null);
+    setPreview([]);
+    setDetectedFields([]);
     setError('');
     setErrorDetail('');
+    
+    // 3. 提供上传状态反馈
+    setIsParsing(true);
 
     try {
+      // 稍微延迟以确保 UI 渲染解析中的状态
+      await new Promise(resolve => setTimeout(resolve, 100));
+
       const data = await selectedFile.arrayBuffer();
       const workbook = XLSX.read(data);
       const worksheet = workbook.Sheets[workbook.SheetNames[0]];
       const jsonData = XLSX.utils.sheet_to_json(worksheet);
 
+      // 4. 处理数据验证问题
       if (jsonData.length === 0) {
         setError('Excel 文件为空');
-        setPreview([]);
-        setDetectedFields([]);
+        setErrorDetail('请确保上传的 Excel 文件中包含有效的数据行');
         return;
       }
 
-      // 检测字段
+      // 检测字段并加载新数据
       const fields = Object.keys(jsonData[0] as object);
+      setFile(selectedFile);
       setDetectedFields(fields);
       setPreview(jsonData.slice(0, 3) as any[]);
       
       console.log('[前端] 检测到字段:', fields);
     } catch (err: any) {
+      // 4. 处理文件格式错误
       console.error('[前端] Excel 解析失败:', err);
       setError('解析 Excel 失败');
-      setErrorDetail(err.message || '请检查文件格式是否为有效的 .xlsx 或 .xls 文件');
-      setPreview([]);
-      setDetectedFields([]);
+      setErrorDetail(err.message || '请检查文件格式是否为有效的 .xlsx 或 .xls 文件，且文件未损坏');
+    } finally {
+      setIsParsing(false);
     }
   }, []);
 
@@ -137,6 +154,7 @@ export default function NewBatchPage() {
             name: batchName.trim(),
             annotators: validAnnotators,
             samples: jsonData,
+            mode: mode,
           }),
         });
       } catch (networkErr: any) {
@@ -225,6 +243,31 @@ export default function NewBatchPage() {
       </div>
 
       <div className="space-y-6">
+        {/* 标注模式 */}
+        <div className="card">
+          <label className="form-label mb-3">标注模式</label>
+          <div className="flex gap-4">
+            <label className={`flex-1 p-4 border rounded-lg cursor-pointer transition-colors ${mode === 'normal' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}>
+              <div className="flex items-center space-x-3">
+                <input type="radio" name="mode" value="normal" checked={mode === 'normal'} onChange={() => setMode('normal')} className="w-4 h-4 text-blue-600 focus:ring-blue-500" />
+                <div className="flex-1">
+                  <h3 className="font-medium text-gray-900">普通模式</h3>
+                  <p className="text-sm text-gray-500 mt-1">单模型回复评估，沿用现有标准标注流程。</p>
+                </div>
+              </div>
+            </label>
+            <label className={`flex-1 p-4 border rounded-lg cursor-pointer transition-colors ${mode === 'compare' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}>
+              <div className="flex items-center space-x-3">
+                <input type="radio" name="mode" value="compare" checked={mode === 'compare'} onChange={() => setMode('compare')} className="w-4 h-4 text-blue-600 focus:ring-blue-500" />
+                <div className="flex-1">
+                  <h3 className="font-medium text-gray-900">对比模式</h3>
+                  <p className="text-sm text-gray-500 mt-1">双模型（DeepSeek & GPT）效果对比评测，支持独立的错误原因记录。</p>
+                </div>
+              </div>
+            </label>
+          </div>
+        </div>
+
         {/* 批次名称 */}
         <div className="card">
           <label className="form-label">批次名称</label>
@@ -272,25 +315,42 @@ export default function NewBatchPage() {
         {/* 文件上传 */}
         <div className="card">
           <label className="form-label mb-3">上传 Excel 文件</label>
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-gray-400 transition-colors">
+          <div className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+            isParsing 
+              ? 'border-blue-400 bg-blue-50' 
+              : 'border-gray-300 hover:border-gray-400'
+          }`}>
             <input
               type="file"
               accept=".xlsx,.xls"
               onChange={handleFileChange}
               className="hidden"
               id="excel-upload"
+              disabled={isParsing}
             />
             <label
               htmlFor="excel-upload"
-              className="cursor-pointer flex flex-col items-center"
+              className={`flex flex-col items-center ${isParsing ? 'cursor-wait' : 'cursor-pointer'}`}
             >
-              <FileSpreadsheet className="w-12 h-12 text-gray-400 mb-3" />
-              <span className="text-gray-600 mb-1">
-                {file ? file.name : '点击上传 Excel 文件'}
-              </span>
-              <span className="text-sm text-gray-400">
-                支持 .xlsx, .xls 格式
-              </span>
+              {isParsing ? (
+                <>
+                  <div className="w-12 h-12 mb-3 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                  <span className="text-blue-600 mb-1 font-medium">正在读取文件数据...</span>
+                  <span className="text-sm text-blue-400">
+                    请稍候，这可能需要几秒钟
+                  </span>
+                </>
+              ) : (
+                <>
+                  <FileSpreadsheet className="w-12 h-12 text-gray-400 mb-3" />
+                  <span className="text-gray-600 mb-1">
+                    {file ? file.name : '点击上传 Excel 文件'}
+                  </span>
+                  <span className="text-sm text-gray-400">
+                    支持 .xlsx, .xls 格式
+                  </span>
+                </>
+              )}
             </label>
           </div>
 

@@ -33,14 +33,21 @@ export function parseAIOutput(raw: string): FormattedAIOutput {
   }
 
   try {
+    // 截断逻辑：去掉“**补充行动建议：**”及之后的内容（不影响 raw，仅影响展示的 content）
+    let truncatedRaw = raw;
+    const splitMatch = raw.match(/(\*\*补充行动建议：\*\*|补充行动建议：)/);
+    if (splitMatch && splitMatch.index !== undefined) {
+      truncatedRaw = raw.substring(0, splitMatch.index);
+    }
+
     // 首先尝试解析JSON
-    const jsonResult = tryParseJSON(raw);
+    const jsonResult = tryParseJSON(truncatedRaw, raw);
     if (jsonResult) {
       return jsonResult;
     }
 
     // 按Markdown文本处理
-    return parseMarkdownOutput(raw);
+    return parseMarkdownOutput(truncatedRaw, raw);
   } catch (error) {
     return {
       success: false,
@@ -55,70 +62,79 @@ export function parseAIOutput(raw: string): FormattedAIOutput {
 /**
  * 尝试解析JSON结构
  */
-function tryParseJSON(raw: string): FormattedAIOutput | null {
+function tryParseJSON(truncatedRaw: string, originalRaw: string): FormattedAIOutput | null {
   try {
-    const data = JSON.parse(raw);
+    const data = JSON.parse(truncatedRaw); // 尝试解析截断后的
+  } catch {
+    try {
+      const data = JSON.parse(originalRaw); // 失败则解析原始的
+      
+      // 提取正文
+      let content = '';
+      if (typeof data === 'string') {
+        content = data;
+      } else if (data.answer || data.content || data.text || data.response) {
+        content = data.answer || data.content || data.text || data.response;
+      } else if (data.result) {
+        content = typeof data.result === 'string' ? data.result : JSON.stringify(data.result);
+      } else {
+        return null;
+      }
 
-    // 提取正文
-    let content = '';
-    if (typeof data === 'string') {
-      content = data;
-    } else if (data.answer || data.content || data.text || data.response) {
-      content = data.answer || data.content || data.text || data.response;
-    } else if (data.result) {
-      content = typeof data.result === 'string' ? data.result : JSON.stringify(data.result);
-    } else {
-      // 无法确定正文字段，返回null让外层处理
+      // 手动截断内容
+      const splitMatch = content.match(/(\*\*补充行动建议：\*\*|补充行动建议：)/);
+      if (splitMatch && splitMatch.index !== undefined) {
+        content = content.substring(0, splitMatch.index);
+      }
+
+      // 提取参考来源
+      const references: Reference[] = [];
+      const refsData = data.references || data.sources || data.citations || data.links;
+
+      if (Array.isArray(refsData)) {
+        refsData.forEach((ref, idx) => {
+          if (typeof ref === 'string') {
+            references.push({ index: idx + 1, title: ref });
+          } else if (typeof ref === 'object') {
+            references.push({
+              index: idx + 1,
+              title: ref.title || ref.name || ref.text || JSON.stringify(ref),
+              url: ref.url || ref.link || ref.source,
+            });
+          }
+        });
+      }
+
+      const processedContent = processContent(content);
+
+      return {
+        success: true,
+        content: processedContent,
+        references,
+        raw: originalRaw,
+      };
+    } catch {
       return null;
     }
-
-    // 提取参考来源
-    const references: Reference[] = [];
-    const refsData = data.references || data.sources || data.citations || data.links;
-
-    if (Array.isArray(refsData)) {
-      refsData.forEach((ref, idx) => {
-        if (typeof ref === 'string') {
-          references.push({ index: idx + 1, title: ref });
-        } else if (typeof ref === 'object') {
-          references.push({
-            index: idx + 1,
-            title: ref.title || ref.name || ref.text || JSON.stringify(ref),
-            url: ref.url || ref.link || ref.source,
-          });
-        }
-      });
-    }
-
-    // 处理正文中的引用和URL
-    const processedContent = processContent(content);
-
-    return {
-      success: true,
-      content: processedContent,
-      references,
-      raw,
-    };
-  } catch {
-    return null;
   }
+  return null; // Fallback
 }
 
 /**
  * 解析Markdown格式输出
  * 处理引用角标 [1] [[1]] 等
  */
-function parseMarkdownOutput(raw: string): FormattedAIOutput {
-  let content = raw;
+function parseMarkdownOutput(truncatedRaw: string, originalRaw: string): FormattedAIOutput {
+  let content = truncatedRaw;
   const references: Reference[] = [];
 
-  // 尝试提取文末的参考来源区域
-  const refSectionMatch = raw.match(/(?:##?\s*(?:参考|来源|引用|References|Sources)[\s\S]*)/i);
+  // 尝试提取文末的参考来源区域 (从原始 raw 提取，因为截断可能会把 reference 截掉)
+  const refSectionMatch = originalRaw.match(/(?:##?\s*(?:参考|来源|引用|References|Sources)[\s\S]*)/i);
 
   if (refSectionMatch) {
     const refSection = refSectionMatch[0];
-    // 从正文中移除参考来源区域（保留在原始内容中）
-    content = raw.replace(refSection, '').trim();
+    // 从正文中移除参考来源区域（只在 content 里操作，不要破坏 content 本身的截断结果）
+    content = content.replace(refSection, '').trim();
 
     // 解析参考来源
     const refLines = refSection.split('\n').slice(1); // 跳过标题行
@@ -186,7 +202,7 @@ function parseMarkdownOutput(raw: string): FormattedAIOutput {
     success: true,
     content: processedContent,
     references,
-    raw,
+    raw: originalRaw,
   };
 }
 

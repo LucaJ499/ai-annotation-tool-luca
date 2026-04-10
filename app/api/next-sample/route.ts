@@ -19,13 +19,17 @@ export async function GET(request: NextRequest) {
 
     const currentSeq = currentSequence ? parseInt(currentSequence, 10) : 0;
 
-    // 1. 提前获取进度信息
-    const [totalCount, completedCount] = await Promise.all([
+    // 1. 提前获取进度信息和批次模式
+    const [totalCount, completedCount, batch] = await Promise.all([
       prisma.sample.count({
         where: { batchId, assignedTo: annotator },
       }),
       prisma.sample.count({
         where: { batchId, assignedTo: annotator, status: 'annotated' },
+      }),
+      prisma.batch.findUnique({
+        where: { id: batchId },
+        select: { mode: true },
       }),
     ]);
 
@@ -99,6 +103,7 @@ export async function GET(request: NextRequest) {
       data: {
         sample,
         isAllCompleted,
+        batchMode: batch?.mode || 'normal',
         progress: {
           current: currentAnnotatorSeq,
           total: totalCount,
